@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitti | Precision Agriculture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'en',
+    includedLanguages: 'hi,mr,ta,te,gu,pa,bn,kn,ml,or,as,ur'
+  }, 'google_translate_element');
+}
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+        
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i data-lucide="sprout" class="logo-icon"></i>
+                <h2 data-i18n="mitti_title">Mitti</h2>
+            </div>
+            
+            <ul class="nav-links">
+                <li id="tab-dashboard" class="active" onclick="switchTab('dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard <span data-i18n="nav_dash" style="display:none"></span></li>
+                <li id="tab-encyclopedia" onclick="switchTab('encyclopedia')"><i data-lucide="book-open"></i> Crop Encyclopedia</li>
+                <li id="tab-history" onclick="switchTab('history')"><i data-lucide="history"></i> Yield History</li>
+                <li id="tab-planner" onclick="switchTab('planner')"><i data-lucide="calendar"></i> Crop Planner</li>
+                <li id="tab-scanner" onclick="switchTab('scanner')"><i data-lucide="scan-line"></i> AI Scanner</li>
+                <li id="tab-schemes" onclick="switchTab('schemes')"><i data-lucide="landmark"></i> Gov Schemes</li>
+                <li id="tab-journey" onclick="switchTab('journey')"><i data-lucide="footprints"></i> My Journey</li>
+            </ul>
+
+            <div class="farmer-profile">
+                <div class="avatar"></div>
+                <div class="info">
+                    <p class="name">Ramesh Kumar</p>
+                    <p class="location" id="userLocation">Jaipur, Rajasthan</p>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- Top Header -->
+            <header class="top-header">
+                <div id="google_translate_element" style="position: absolute; top: 1rem; right: 2rem; z-index: 1000;"></div>
+                <div class="header-text">
+                    <h1 id="greeting">Namaste, Ramesh!</h1>
+                    <p id="wisdom-quote">"The earth is the mother of all people, and all people should have equal rights upon it."</p>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label>State</label>
+                                                <select id="stateSelect">
+                            <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                            <option value="Assam">Assam</option>
+                            <option value="Bihar">Bihar</option>
+                            <option value="Chandigarh">Chandigarh</option>
+                            <option value="Chhattisgarh">Chhattisgarh</option>
+                            <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli</option>
+                            <option value="Delhi">Delhi</option>
+                            <option value="Goa">Goa</option>
+                            <option value="Gujarat">Gujarat</option>
+                            <option value="Haryana">Haryana</option>
+                            <option value="Himachal Pradesh">Himachal Pradesh</option>
+                            <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                            <option value="Jharkhand">Jharkhand</option>
+                            <option value="Karnataka">Karnataka</option>
+                            <option value="Kerala">Kerala</option>
+                            <option value="Ladakh">Ladakh</option>
+                            <option value="Lakshadweep">Lakshadweep</option>
+                            <option value="Madhya Pradesh">Madhya Pradesh</option>
+                            <option value="Maharashtra">Maharashtra</option>
+                            <option value="Manipur">Manipur</option>
+                            <option value="Meghalaya">Meghalaya</option>
+                            <option value="Mizoram">Mizoram</option>
+                            <option value="Nagaland">Nagaland</option>
+                            <option value="Odisha">Odisha</option>
+                            <option value="Puducherry">Puducherry</option>
+                            <option value="Punjab">Punjab</option>
+                            <option value="Rajasthan" selected>Rajasthan</option>
+                            <option value="Sikkim">Sikkim</option>
+                            <option value="Tamil Nadu">Tamil Nadu</option>
+                            <option value="Telangana">Telangana</option>
+                            <option value="Tripura">Tripura</option>
+                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                            <option value="Uttarakhand">Uttarakhand</option>
+                            <option value="West Bengal">West Bengal</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Season</label>
+                        <select id="seasonSelect">
+                            <option value="Rabi" selected>Rabi (Winter)</option>
+                            <option value="Kharif">Kharif (Monsoon)</option>
+                            <option value="Zaid">Zaid (Summer)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Soil Profile</label>
+                        <select id="soilSelect">
+                            <option value="Auto">Auto-Detect (Sensor)</option>
+                            <option value="Alluvial Soil (Fertile)">Alluvial Soil</option>
+                            <option value="Black Soil (Regur)">Black Soil (Regur)</option>
+                            <option value="Red & Yellow Soil">Red & Yellow Soil</option>
+                            <option value="Laterite Soil">Laterite Soil</option>
+                            <option value="Arid / Desert Soil">Arid / Desert Soil</option>
+                            <option value="Forest/Mountain Soil">Forest/Mountain Soil</option>
+                            <option value="Saline/Alkaline Soil">Saline/Alkaline Soil</option>
+                            <option value="Peaty/Marshy Soil">Peaty/Marshy Soil</option>
+                            <option value="Coastal Sandy Soil">Coastal Sandy Soil</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Water</label>
+                        <select id="waterSelect">
+                            <option value="Any">Any</option>
+                            <option value="Low">Low (Rainfed)</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High (Irrigated)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Category</label>
+                        <select id="typeSelect">
+                            <option value="Any">Any</option>
+                            <option value="Cereal">Cereals</option>
+                            <option value="Pulse">Pulses</option>
+                            <option value="Spice">Spices</option>
+                            <option value="Vegetable">Vegetables</option>
+                            <option value="Cash Crop">Cash Crops</option>
+                            <option value="Oilseed">Oilseeds</option>
+                            <option value="Plantation">Plantation</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Local Weather</label>
+                        <select id="phenomenonSelect">
+                            <option value="None">None / Normal</option>
+                            <option value="Mango Showers">Mango Showers (South)</option>
+                            <option value="Kal Baisakhi">Kal Baisakhi (East)</option>
+                            <option value="Western Disturbances">Western Disturbances (North)</option>
+                            <option value="Loo">Loo Hot Winds (North/West)</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-primary" onclick="loadDemoData()">
+                        <i data-lucide="refresh-cw"></i> Scan Sensors
+                    </button>
+                    <button class="btn-primary" style="background: #ef4444; color: white;" onclick="makeEmergencyCall()">
+                        <i data-lucide="phone-call"></i> Call The Farmer
+                    </button>
+                </div>
+            </header>
+
+                        <!-- Tab Views -->
+            <div id="view-dashboard" class="tab-view active">
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                
+                <!-- Active Soil Profile -->
+                <section class="card profile-card full-width">
+                    <div class="card-header">
+                        <i data-lucide="microscope"></i>
+                        <h3>Active Soil Profile</h3>
+                    </div>
+                    <div class="profile-content">
+                        <h2 id="soilProfileName" class="gradient-text">Detecting...</h2>
+                        <p id="soilProfileDesc">Scanning current sensor metrics to identify primary soil composition based on regional data.</p>
+                    </div>
+                </section>
+            
+
+            
+
+                                <!-- Wisdom & Advisories -->
+                <section class="card wisdom-card full-width">
+                    <div class="card-header" style="color: #facc15;">
+                        <i data-lucide="sun"></i>
+                        <h3>Daily Wisdom & Advisories</h3>
+                    </div>
+                    <div style="background: rgba(250, 204, 21, 0.05); border-left: 4px solid #facc15; padding: 1.5rem; border-radius: 8px;">
+                        <p id="dashboard-wisdom" style="font-size: 1.1rem; font-style: italic; color: #fef08a; margin-bottom: 1rem;">"Wisdom quote here"</p>
+                        <ul id="dashboard-advisories" style="list-style-type: none; margin: 0; padding: 0; color: #f3f4f6; line-height: 1.6;">
+                            <!-- Populated via JS -->
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- NPK Levels -->
+                <section class="card npk-card">
+                    <div class="card-header">
+                        <i data-lucide="test-tube"></i>
+                        <h3>Macronutrients</h3>
+                    </div>
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="label">Nitrogen (N)</span>
+                            <div class="value-bar"><div class="fill" id="bar-n" style="width: 0%; background: #4ade80;"></div></div>
+                            <span class="value"><strong id="val-n">0</strong> mg/kg</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">Phosphorus (P)</span>
+                            <div class="value-bar"><div class="fill" id="bar-p" style="width: 0%; background: #facc15;"></div></div>
+                            <span class="value"><strong id="val-p">0</strong> mg/kg</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">Potassium (K)</span>
+                            <div class="value-bar"><div class="fill" id="bar-k" style="width: 0%; background: #f87171;"></div></div>
+                            <span class="value"><strong id="val-k">0</strong> mg/kg</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Health Metrics -->
+                <section class="card health-card">
+                    <div class="card-header">
+                        <i data-lucide="activity"></i>
+                        <h3>Soil Health</h3>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="health-item">
+                            <span class="label">pH Level</span>
+                            <strong class="value" id="val-ph">0.0</strong>
+                        </div>
+                        <div class="health-item">
+                            <span class="label">Salinity (EC)</span>
+                            <strong class="value" id="val-ec">0.0 <small>mS/cm</small></strong>
+                        </div>
+                        <div class="health-item">
+                            <span class="label">Moisture</span>
+                            <strong class="value" id="val-moisture">0%</strong>
+                        </div>
+                        <div class="health-item">
+                            <span class="label">Temp</span>
+                            <strong class="value" id="val-temp">0°C</strong>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Recommendation Engine -->
+            <section class="card engine-card">
+                <div class="card-header">
+                    <i data-lucide="cpu"></i>
+                    <h3>Suitability Engine</h3>
+                    <span class="engine-status">Online</span>
+                </div>
+                
+                <div class="crops-container" id="cropsGrid">
+                    <!-- Javascript will populate this -->
+                    <div class="loading-pulse">Analyzing regional matrices...</div>
+                </div>
+
+                <div class="crop-details-panel" id="cropDetailsPanel" style="display: none;">
+                    <div class="panel-header">
+                        <h3 id="detailName">Crop Name</h3>
+                        <div class="match-badge" id="detailMatch">0% Match</div>
+                    </div>
+                    <p class="feedback" id="detailFeedback">Feedback text</p>
+                    <div class="detail-stats">
+                        <div class="stat"><label>Ideal pH:</label> <span id="detailPh"></span></div>
+                        <div class="stat"><label>Ideal Moisture:</label> <span id="detailMoisture"></span></div>
+                        <div class="stat"><label>Regions:</label> <span id="detailRegions"></span></div>
+                    </div>
+                </div>
+
+            </section>
+
+        </div> <!-- End view-dashboard -->
+<!-- Encyclopedia View -->
+            <div id="view-encyclopedia" class="tab-view" style="display: none;">
+                <section class="card full-width">
+                    <div class="card-header">
+                        <i data-lucide="book-open"></i>
+                        <h3>Mitti Crop Encyclopedia</h3>
+                    </div>
+                    <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Learn about the specific soil, water, and regional needs of all major Indian crops.</p>
+                    <div class="crops-container" id="encyclopediaGrid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- History View -->
+            <div id="view-history" class="tab-view" style="display: none;">
+                <div class="dashboard-grid">
+                    <section class="card">
+                        <div class="card-header">
+                            <i data-lucide="plus-circle"></i>
+                            <h3>Log New Yield</h3>
+                        </div>
+                        <form id="yieldForm" onsubmit="submitYield(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="control-group">
+                                <label>Crop</label>
+                                <input type="text" id="yieldCrop" required style="padding: 0.75rem; background: var(--bg-card); border: 1px solid var(--border); color: white; border-radius: 8px;">
+                            </div>
+                            <div class="control-group">
+                                <label>Season</label>
+                                <select id="yieldSeason" style="padding: 0.75rem;">
+                                    <option value="Kharif">Kharif</option>
+                                    <option value="Rabi">Rabi</option>
+                                    <option value="Zaid">Zaid</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>Yield Amount (Quintals)</label>
+                                <input type="number" id="yieldAmount" required min="1" style="padding: 0.75rem; background: var(--bg-card); border: 1px solid var(--border); color: white; border-radius: 8px;">
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top: 1rem;"><i data-lucide="save"></i> Save Record</button>
+                        </form>
+                    </section>
+                    
+                    <section class="card">
+                        <div class="card-header">
+                            <i data-lucide="bar-chart-2"></i>
+                            <h3>Past Yield Records</h3>
+                        </div>
+                        <div id="historyList" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- Populated by JS -->
+                        </div>
+                    </section>
+                    
+                    <!-- Smart Next Crop Suggestion -->
+                    <section class="card full-width" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 95, 70, 0.08)); border: 1px solid var(--primary-color);">
+                        <div class="card-header">
+                            <i data-lucide="brain-circuit"></i>
+                            <h3 style="color: var(--primary-color);">Smart Next Crop Suggestion</h3>
+                        </div>
+                        <p style="color: #94a3b8; margin-bottom: 1.5rem;">Based on your past crop history, soil type, and the upcoming season, here is what you should grow next:</p>
+                        
+                        <div id="smartSuggestionContent" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <p style="color: #64748b; font-style: italic;">Log at least one yield record above to get personalized suggestions.</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Planner View -->
+            <div id="view-planner" class="tab-view" style="display: none;">
+                <!-- Global Soil Knowledge Toggle for Planner -->
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(15, 23, 42, 0.4); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                        <label style="margin: 0; font-size: 0.9rem;">I know my soil type</label>
+                        <label class="switch" style="transform: scale(0.8);">
+                            <input type="checkbox" id="globalSoilKnowledgeToggle" checked onchange="handleSoilKnowledgeChange()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    
+                    <!-- Top section: Smart Crop Suggester -->
+                    <section class="card full-width" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 95, 70, 0.1)); border: 1px solid var(--primary-color);">
+                        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: 2;">
+                            <h3 style="color: var(--primary-color); margin: 0; white-space: nowrap;"><i data-lucide="brain-circuit"></i> Smart Suggester</h3>
+                            
+                            <!-- Filter: Season -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.9rem; color: #94a3b8;">Upcoming Season:</label>
+                                <select id="planner-season-filter" class="theme-select" style="padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.9rem;" onchange="filterPlannerCrops()">
+                                    <option value="All">All Seasons</option>
+                                    <option value="Kharif">Kharif (Jun - Oct)</option>
+                                    <option value="Rabi">Rabi (Oct - Mar)</option>
+                                    <option value="Zaid">Zaid (Mar - Jun)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Filter: Soil -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.9rem; color: #94a3b8;">Soil Type:</label>
+                                <select id="planner-soil-filter" class="theme-select" style="padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.9rem;" onchange="filterPlannerCrops()">
+                                    <option value="All">Any Soil</option>
+                                    <option value="Alluvial Soil (Fertile)">Alluvial</option>
+                                    <option value="Black Soil (Regur)">Black</option>
+                                    <option value="Red & Yellow Soil">Red & Yellow</option>
+                                    <option value="Laterite Soil">Laterite</option>
+                                    <option value="Arid/Desert Soil">Arid/Desert</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Filtered Results Dropdown -->
+                        <div style="flex: 1; text-align: right; min-width: 250px;">
+                            <label for="planner-crop-select" style="font-weight: 500; margin-right: 0.5rem; color: #34d399;">Suggested Crop:</label>
+                            <select id="planner-crop-select" class="theme-select" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.5); background: rgba(15, 23, 42, 0.9); color: var(--text-color); font-size: 1rem; font-weight: bold; width: 100%; max-width: 200px;" onchange="updatePlanner()">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                    </section>
+                    
+                    <!-- Left: Seasonal Timeline -->
+                    <section class="card" style="grid-column: span 2;">
+                        <div class="card-header">
+                            <i data-lucide="calendar-days"></i>
+                            <h3>Seasonal Timeline</h3>
+                        </div>
+                        <div class="timeline-container">
+                            <div class="timeline-grid" id="timelineGrid">
+                                <!-- Generated by JS -->
+                            </div>
+                            <div class="timeline-legend" style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; font-size: 0.9rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 12px; height: 12px; background: #3b82f6; border-radius: 3px;"></span> Sowing</div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 12px; height: 12px; background: #f59e0b; border-radius: 3px;"></span> Harvesting</div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Farm School -->
+                    <section class="card" style="grid-column: span 2;">
+                        <div class="card-header">
+                            <i data-lucide="graduation-cap"></i>
+                            <h3>Farm School</h3>
+                        </div>
+                        <div id="farmSchoolContent" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                            <!-- Populated by JS -->
+                            <p style="color: var(--text-muted); font-style: italic;">Select a crop to view the educational guide.</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- AI Scanner View -->
+            <div id="view-scanner" class="tab-view" style="display: none;">
+                <div class="card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 2rem;">
+                    <h2><i data-lucide="scan-line"></i> Crop Disease AI Scanner</h2>
+                    <p style="color: #94a3b8; margin-bottom: 2rem;">Upload an image of a sick leaf to instantly identify the disease.</p>
+                    
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" style="border: 2px dashed #10b981; border-radius: 12px; padding: 3rem 1rem; cursor: pointer; transition: all 0.3s; background: rgba(16, 185, 129, 0.05);">
+                        <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color: #10b981; margin-bottom: 1rem;"></i>
+                        <h4 style="margin: 0;">Click or Drag image to upload</h4>
+                        <p style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">Supports JPG, PNG</p>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div id="previewZone" style="display: none; margin-top: 2rem;">
+                        <img id="imagePreview" src="" alt="Preview" style="max-width: 100%; border-radius: 8px; border: 2px solid #334155; margin-bottom: 1rem;">
+                        <button class="btn-primary" onclick="startScan()" id="scanBtn" style="width: 100%; font-size: 1.1rem; padding: 1rem;"><i data-lucide="cpu"></i> Analyze Image</button>
+                    </div>
+                    
+                    <!-- Loading -->
+                    <div id="scanLoading" style="display: none; margin-top: 2rem;">
+                        <div class="scanner-laser"></div>
+                        <p style="color: #10b981; font-weight: bold; margin-top: 1rem;">Analyzing leaf structure...</p>
+                    </div>
+                    
+                    <!-- Results -->
+                    <div id="scanResults" style="display: none; margin-top: 2rem; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 1.5rem; text-align: left;">
+                        <h3 style="color: #ef4444; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; margin-bottom: 1rem;"><i data-lucide="alert-circle"></i> Diagnosis Result</h3>
+                        <p><strong>Detected Issue:</strong> <span id="resDisease" style="color: #fca5a5;"></span></p>
+                        <p><strong>AI Confidence:</strong> <span id="resConfidence" style="color: #10b981;"></span>%</p>
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; border-radius: 4px;">
+                            <strong style="color: #34d399;">Recommended Solution:</strong>
+                            <p id="resSolution" style="margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.5;"></p>
+                        </div>
+                        <button class="btn-primary" onclick="resetScanner()" style="margin-top: 1.5rem; background: #334155; border-color: #475569;">Scan Another</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gov Schemes View -->
+            <div id="view-schemes" class="tab-view" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2><i data-lucide="landmark"></i> Government Schemes & Subsidies</h2>
+                    <p style="color: #94a3b8;">Discover financial aid and resources available for your farm.</p>
+                </div>
+                <div class="dashboard-grid" id="schemesContainer">
+                    <!-- Schemes rendered by JS -->
+                    <div style="grid-column: span 2; text-align: center; color: #94a3b8;"><i data-lucide="loader" class="spin"></i> Loading schemes...</div>
+                </div>
+            </div>
+
+            <!-- Crop Journey View -->
+            <div id="view-journey" class="tab-view" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2><i data-lucide="footprints"></i> My Crop Journey</h2>
+                    <p style="color: #94a3b8;">Daily guidance from sowing to harvest.</p>
+                </div>
+                
+                <div id="journeySetup" class="card" style="margin-bottom: 2rem; display: none;">
+                    <h3>Start a New Journey</h3>
+                    <p style="color: #94a3b8; margin-bottom: 1rem;">Select a crop and start date to get personalized daily reminders.</p>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                        <div class="control-group" style="flex: 1;">
+                            <label>Crop</label>
+                            <select id="journeyCropSelect" style="padding: 0.75rem;">
+                                <option value="Wheat">Wheat</option>
+                                <option value="Paddy">Paddy</option>
+                                <option value="Mango">Mango</option>
+                                <option value="Cotton">Cotton</option>
+                            </select>
+                        </div>
+                        <div class="control-group" style="flex: 1;">
+                            <label>Soil Type</label>
+                            <select id="journeySoilSelect" style="padding: 0.75rem;">
+                                <option value="Alluvial">Alluvial (Loamy)</option>
+                                <option value="Black">Black (Clayey)</option>
+                                <option value="Red">Red (Sandy/Porous)</option>
+                                <option value="Laterite">Laterite (Acidic)</option>
+                            </select>
+                        </div>
+                        <div class="control-group" style="flex: 1;">
+                            <label>Start Date</label>
+                            <input type="date" id="journeyStartDate" style="padding: 0.75rem; background: var(--bg-card); border: 1px solid var(--border); color: white; border-radius: 8px;">
+                        </div>
+                        <button class="btn-primary" onclick="startJourney()" style="height: 45px;"><i data-lucide="play"></i> Start Journey</button>
+                    </div>
+                </div>
+
+                <div id="activeJourney" style="display: none;">
+                    <div class="card" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 95, 70, 0.1)); border: 1px solid var(--primary-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="color: var(--primary-color); font-size: 1.5rem; margin-bottom: 0.25rem;">
+                                    <span id="journeyCropName">Wheat</span> 
+                                    <span style="font-size: 0.9rem; color: #94a3b8; font-weight: normal; margin-left: 0.5rem; border: 1px solid #475569; padding: 0.2rem 0.5rem; border-radius: 4px;">Soil: <span id="journeyActiveSoil">Unknown</span></span>
+                                </h3>
+                                <p style="color: #94a3b8;">Day <span id="journeyCurrentDay" style="color: white; font-weight: bold;">12</span> of <span id="journeyTotalDays">150</span></p>
+                            </div>
+                            <button class="btn-primary" onclick="stopJourney()" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #fca5a5;"><i data-lucide="stop-circle"></i> End Journey</button>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                                <span>Progress</span>
+                                <span id="journeyProgressText">8%</span>
+                            </div>
+                            <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                                <div id="journeyProgressBar" style="height: 100%; width: 8%; background: var(--primary-color); border-radius: 4px; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                        <p style="color: #34d399; font-weight: bold;"><i data-lucide="map-pin"></i> Current Phase: <span id="journeyPhaseName">Vegetative Growth</span></p>
+                    </div>
+                    
+                    <h3 style="margin: 2rem 0 1rem 0;"><i data-lucide="sun"></i> Today's Tasks</h3>
+                    <div id="journeyTodayTasks" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Tasks go here -->
+                    </div>
+
+                    <h3 style="margin: 2rem 0 1rem 0; color: #94a3b8;"><i data-lucide="calendar-clock"></i> Upcoming Tasks</h3>
+                    <div id="journeyUpcomingTasks" style="display: flex; flex-direction: column; gap: 1rem; opacity: 0.8;">
+                        <!-- Upcoming Tasks go here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    <script src="app.js?v=6"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

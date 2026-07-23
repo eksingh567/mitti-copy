@@ -1,0 +1,32 @@
+{
+    "9876543210": {
+        "name": "Ramesh",
+        "phone": "9876543210",
+        "state": "Kerala",
+        "city": "Wayanad"
+    },
+    "9876543211": {
+        "name": "Ramesh",
+        "phone": "9876543211",
+        "state": "Rajasthan",
+        "city": "Jaipur"
+    },
+    "7011881299": {
+        "name": "Doctor Aris",
+        "phone": "7011881299",
+        "state": "Maharashtra",
+        "city": "Mumbai"
+    },
+    "8882130424": {
+        "name": "Eknoor Singh Bhatia",
+        "phone": "8882130424",
+        "state": "Delhi",
+        "city": "New Delhi"
+    },
+    "1234567890": {
+        "name": "Test User",
+        "phone": "1234567890",
+        "state": "Andhra Pradesh",
+        "city": "Anantapur"
+    }
+}

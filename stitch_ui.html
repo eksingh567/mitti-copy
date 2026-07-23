@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mitti | Farmer Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#002204",
+                        "on-surface": "#e2e3df",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed": "#94f990",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#becab9",
+                        "on-secondary-container": "#d5b1a4",
+                        "surface-tint": "#78dc77",
+                        "background": "#121412",
+                        "on-secondary": "#422b22",
+                        "inverse-on-surface": "#2f312e",
+                        "on-tertiary-fixed-variant": "#005312",
+                        "outline-variant": "#3f4a3c",
+                        "on-background": "#e2e3df",
+                        "on-primary-fixed-variant": "#005313",
+                        "tertiary-fixed-dim": "#88d982",
+                        "secondary-fixed-dim": "#e4beb2",
+                        "on-tertiary": "#003909",
+                        "surface-container-highest": "#333533",
+                        "primary": "#78dc77",
+                        "primary-container": "#4caf50",
+                        "tertiary-fixed": "#a3f69c",
+                        "inverse-surface": "#e2e3df",
+                        "tertiary-container": "#5dac5b",
+                        "on-tertiary-fixed": "#002204",
+                        "secondary": "#e4beb2",
+                        "primary-fixed-dim": "#78dc77",
+                        "inverse-primary": "#006e1c",
+                        "surface": "#121412",
+                        "surface-bright": "#383a37",
+                        "secondary-fixed": "#ffdbce",
+                        "on-secondary-fixed-variant": "#5b4137",
+                        "secondary-container": "#5d4339",
+                        "surface-dim": "#121412",
+                        "outline": "#899484",
+                        "surface-container-lowest": "#0d0f0d",
+                        "on-secondary-fixed": "#2b160f",
+                        "surface-container-high": "#292a28",
+                        "tertiary": "#88d982",
+                        "on-tertiary-container": "#003c0a",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "surface-variant": "#333533",
+                        "on-primary-container": "#003c0b",
+                        "on-primary": "#00390a",
+                        "surface-container": "#1e201e",
+                        "surface-container-low": "#1a1c1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "card-padding": "20px",
+                        "stack-gap": "12px",
+                        "gutter": "24px",
+                        "margin-page": "32px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "mono-data": ["Geist"],
+                        "title-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "mono-data": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "title-md": ["18px", {"lineHeight": "24px", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(18, 20, 18, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.30);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glow-line {
+            box-shadow: 0 0 10px rgba(120, 220, 119, 0.4);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(120, 220, 119, 0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Background Atmospheric Effect -->
+
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface/40 dark:bg-surface/40 font-body-md text-body-md backdrop-blur-[20px] border-r border-white/15 shadow-none flex flex-col h-full py-8 px-4 z-50">
+<div class="mb-12 px-2">
+<h1 class="font-headline-lg text-headline-lg text-primary font-bold">Mitti</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Agronomy Insights</p>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Active State: Dashboard -->
+<a class="flex items-center gap-4 py-3 px-4 rounded-xl text-primary font-bold border-r-2 border-primary bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-4 py-3 px-4 rounded-xl text-on-surface-variant hover:bg-white/10 hover:backdrop-blur-md transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">sensors</span>
+                Sensors
+            </a>
+<a class="flex items-center gap-4 py-3 px-4 rounded-xl text-on-surface-variant hover:bg-white/10 hover:backdrop-blur-md transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">history</span>
+                Crop History
+            </a>
+<a class="flex items-center gap-4 py-3 px-4 rounded-xl text-on-surface-variant hover:bg-white/10 hover:backdrop-blur-md transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto pt-8 border-t border-white/10">
+<a class="flex items-center gap-4 py-3 px-4 rounded-xl text-on-surface-variant hover:bg-error/10 hover:text-error transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Logout
+            </a>
+</div>
+</aside>
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] bg-surface/40 dark:bg-surface/40 font-title-md text-title-md backdrop-blur-[20px] border-b border-white/15 shadow-none flex justify-between items-center h-20 px-gutter z-40">
+<div class="flex items-center gap-8">
+<h2 class="font-headline-lg text-headline-lg text-primary font-bold">Mitti</h2>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-primary border-b-2 border-primary pb-1 font-medium" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Sensors</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex items-center gap-2 bg-white/5 py-2 px-4 rounded-full border border-white/10">
+<span class="material-symbols-outlined text-primary text-sm">cloudy_filled</span>
+<span class="font-mono-data text-mono-data">Weather: 24°C | 60% Humidity</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant cursor-pointer transition-opacity active:opacity-80">location_on</button>
+<div class="h-10 w-10 rounded-full border border-primary/40 p-0.5 overflow-hidden">
+<img class="w-full h-full object-cover rounded-full" data-alt="A professional close-up portrait of a South Asian agronomist wearing modern outdoor field gear, standing against a blurred background of a lush green field at golden hour. The lighting is soft and warm, highlighting intelligence and expertise, with a high-end cinematic photography style consistent with a premium agricultural technology platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8vNFjU3KTicd8ICulsPSijkBia-3iuvPjGMTq_2Lay_g38XroRyBK2M7b6zPOktoqrhpp9cJodEmmJXuA1mlkW8SP7GaqrCnNXfwc5u9srXlaaN4laNQCpP1iqVWrgBuUa_ggOuLtsVtkHS3oFKpP1bJMW43TbebIV1JQh--Z6RXgf0yBmr1YrPJw23NKxPbJXtjhTiFCq2xmAj4KzmHwf22zhxJDbF0GNEwwovyhbGKUSUmlXLd4AffdmxL78GPF2KxhtDEZgpx2"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 mt-20 p-margin-page">
+<!-- Welcome Section -->
+<div class="mb-gutter flex justify-between items-end">
+<div>
+<p class="font-label-sm text-label-sm text-primary mb-1 uppercase tracking-widest">System Operational</p>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Welcome back, Anand</h1>
+</div>
+<div class="flex gap-stack-gap">
+<button class="bg-primary text-on-primary-fixed px-6 py-2 rounded-xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20">Generate Report</button>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Local Climate Alert (Banner) -->
+<div class="col-span-12 glass-card rounded-xl p-card-padding relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-r from-error/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-center gap-6 relative z-10">
+<div class="bg-error/20 p-4 rounded-full border border-error/30 text-error animate-pulse">
+<span class="material-symbols-outlined text-3xl">warning</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-error font-bold mb-1">Local Climate Alert</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Mango Showers Expected: Prepare for early-season rainfall in Karnataka. Secure harvested crops and adjust irrigation schedules immediately.</p>
+</div>
+<button class="ml-auto bg-white/10 hover:bg-white/20 border border-white/20 px-6 py-2 rounded-lg font-medium transition-all">Dismiss</button>
+</div>
+</div>
+<!-- Card 1: Soil Sensor Readings -->
+<div class="col-span-12 lg:col-span-8 glass-card rounded-xl p-card-padding flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<h3 class="font-title-md text-title-md font-bold">Soil Sensor Readings</h3>
+</div>
+<div class="flex gap-2">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/20">LIVE DATA</span>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-6 flex-1">
+<!-- N -->
+<div class="space-y-3">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>Nitrogen (N)</span>
+<span class="text-primary">42 mg/kg</span>
+</div>
+<div class="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+<div class="h-full bg-primary glow-line" style="width: 75%"></div>
+</div>
+</div>
+<!-- P -->
+<div class="space-y-3">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>Phosphorus (P)</span>
+<span class="text-primary">18 mg/kg</span>
+</div>
+<div class="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+<div class="h-full bg-primary glow-line" style="width: 45%"></div>
+</div>
+</div>
+<!-- K -->
+<div class="space-y-3">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>Potassium (K)</span>
+<span class="text-primary">156 mg/kg</span>
+</div>
+<div class="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+<div class="h-full bg-primary glow-line" style="width: 85%"></div>
+</div>
+</div>
+<!-- pH -->
+<div class="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col justify-center items-center group hover:bg-white/10 transition-all">
+<span class="font-label-sm text-label-sm text-on-surface-variant mb-1">Soil pH</span>
+<span class="font-display-lg text-4xl text-primary font-bold">6.5</span>
+<span class="text-xs text-primary/60 mt-1 uppercase tracking-tighter">Optimal</span>
+</div>
+<!-- Moisture -->
+<div class="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col justify-center items-center group hover:bg-white/10 transition-all">
+<span class="font-label-sm text-label-sm text-on-surface-variant mb-1">Moisture</span>
+<span class="font-display-lg text-4xl text-primary font-bold">40%</span>
+<span class="text-xs text-primary/60 mt-1 uppercase tracking-tighter">Adequate</span>
+</div>
+<!-- EC -->
+<div class="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col justify-center items-center group hover:bg-white/10 transition-all">
+<span class="font-label-sm text-label-sm text-on-surface-variant mb-1">Conductivity</span>
+<span class="font-display-lg text-4xl text-primary font-bold">1.2</span>
+<span class="text-xs text-primary/60 mt-1 uppercase tracking-tighter">dS/m</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Soil Type Profile -->
+<div class="col-span-12 lg:col-span-4 glass-card rounded-xl overflow-hidden flex flex-col">
+<div class="h-32 w-full relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Macro photography of fertile alluvial soil with rich dark brown textures and small grains, interspersed with tiny organic roots. The lighting is earthy and natural, highlighting the moist, high-density structure of healthy farmland soil. Cinematic depth of field, 8k resolution, organic and scientific aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC9rF8ULLNDLpw37HSFh-ME8YJISmNu9vcPFcBVut5FGju7oy8T3aWHZ-u1Lqde7Xf1Tw1r_Ojt1AcrpxPbdA5G4cxtQ-R_7MBUadVBiGVlDVIUBsi5JDSW15Qt7B-Re14UBV9qXwUJleYZOZbcWa-9uGZrMQ1F6e-bzbAIlkrmD82uX2yo4-5AlZXdpMzC6J03C7xBVXnYDWhNKkCBqSsIySL_Cz9ttbjnP1Q5xjIj7ihrDCwjflE1kAr158F_-nVMU_wU9fP_nL1u')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#121412] to-transparent"></div>
+<div class="absolute bottom-4 left-6 flex items-center gap-3">
+<div class="bg-primary/20 backdrop-blur-md p-2 rounded-lg border border-primary/30">
+<span class="material-symbols-outlined text-primary">layers</span>
+</div>
+<h3 class="font-title-md text-title-md font-bold">Alluvial Soil</h3>
+</div>
+</div>
+<div class="p-card-padding flex-1 space-y-4">
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                        Formed by surface water, this soil type is characterized by its exceptionally high fertility and richness in organic matter.
+                    </p>
+<div class="space-y-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+<span class="text-sm">High nitrogen retention</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+<span class="text-sm">Excellent water holding capacity</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+<span class="text-sm">Rich mineral deposits (Potash)</span>
+</div>
+</div>
+<div class="pt-4 mt-auto">
+<button class="w-full py-2 border border-white/10 rounded-lg hover:bg-white/5 transition-all text-sm font-medium">View Detailed Profile</button>
+</div>
+</div>
+</div>
+<!-- Section: Crop Recommendations -->
+<div class="col-span-12 space-y-4">
+<div class="flex justify-between items-center">
+<h3 class="font-headline-lg text-2xl font-bold flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">eco</span>
+                        Crop Recommendations
+                    </h3>
+<div class="flex gap-2">
+<button class="p-2 glass-card rounded-full hover:text-primary transition-all active:scale-90"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-2 glass-card rounded-full hover:text-primary transition-all active:scale-90"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<div class="flex overflow-x-auto pb-4 gap-gutter snap-x no-scrollbar">
+<!-- Crop Card 1 -->
+<div class="min-w-[280px] glass-card rounded-xl p-card-padding snap-start relative group cursor-pointer hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-primary/10 p-3 rounded-2xl border border-primary/20 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">grass</span>
+</div>
+<div class="text-right">
+<span class="text-primary font-bold text-xl block">98%</span>
+<span class="text-xs text-on-surface-variant font-medium">Match</span>
+</div>
+</div>
+<h4 class="font-title-md text-title-md font-bold mb-2">Rice</h4>
+<p class="text-sm text-on-surface-variant mb-4">Ideal for current moisture levels and high alluvial silt content.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Kharif Season</span>
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">High Yield</span>
+</div>
+</div>
+<!-- Crop Card 2 -->
+<div class="min-w-[280px] glass-card rounded-xl p-card-padding snap-start relative group cursor-pointer hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-primary/10 p-3 rounded-2xl border border-primary/20 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">psychology</span>
+</div>
+<div class="text-right">
+<span class="text-primary font-bold text-xl block">85%</span>
+<span class="text-xs text-on-surface-variant font-medium">Match</span>
+</div>
+</div>
+<h4 class="font-title-md text-title-md font-bold mb-2">Wheat</h4>
+<p class="text-sm text-on-surface-variant mb-4">Requires slight adjustment in pH levels. Better for upcoming Rabi season.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Rabi Season</span>
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Cereal</span>
+</div>
+</div>
+<!-- Crop Card 3 -->
+<div class="min-w-[280px] glass-card rounded-xl p-card-padding snap-start relative group cursor-pointer hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-primary/10 p-3 rounded-2xl border border-primary/20 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">forest</span>
+</div>
+<div class="text-right">
+<span class="text-primary font-bold text-xl block">72%</span>
+<span class="text-xs text-on-surface-variant font-medium">Match</span>
+</div>
+</div>
+<h4 class="font-title-md text-title-md font-bold mb-2">Sugarcane</h4>
+<p class="text-sm text-on-surface-variant mb-4">High fertility requirements met, but demands significant water management.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Perennial</span>
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Cash Crop</span>
+</div>
+</div>
+<!-- Crop Card 4 -->
+<div class="min-w-[280px] glass-card rounded-xl p-card-padding snap-start relative group cursor-pointer hover:-translate-y-1">
+<div class="flex justify-between items-start mb-6">
+<div class="bg-primary/10 p-3 rounded-2xl border border-primary/20 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">local_florist</span>
+</div>
+<div class="text-right">
+<span class="text-primary font-bold text-xl block">64%</span>
+<span class="text-xs text-on-surface-variant font-medium">Match</span>
+</div>
+</div>
+<h4 class="font-title-md text-title-md font-bold mb-2">Maize</h4>
+<p class="text-sm text-on-surface-variant mb-4">Good drainage in current soil profile. Potassium levels are favorable.</p>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Zaid Season</span>
+<span class="px-2 py-1 bg-white/5 rounded-md text-[10px] border border-white/5">Drought Hardy</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area / Map Integration -->
+<div class="col-span-12 glass-card rounded-xl p-card-padding overflow-hidden h-[300px] relative">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover grayscale brightness-50 contrast-125" data-alt="A top-down satellite view of segmented lush green farmland in Karnataka, India, with detailed irrigation canals and vibrant foliage. The image uses a high-contrast cinematic style with deep blacks in the shadows and vibrant, life-filled greens in the crops. Professional, scientific, and atmospheric agricultural mapping aesthetic." data-location="Karnataka, India" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBz83OyweJNMkYuFq_aUiijJGRUPQQFnHSuZWKebxOOY3nIXxB-KeoS9KdY1lTn8Bj8qyvVeetPsWq8_UgnLY3t9_E0NM-91l7Ujsxg5uRINjWSfCIBkHDaOXPA-0LEjUWd2nesfGlaPjxA9QqexxSYzBr3InousFU-uMfFNQKzZua6v1SGchSA89fbUqiQUvKE1oeDd6O-gCJGSYPqOD1Gtv_C_a-5aAgZnWP6EK6EN16SQhjjT1S-cMtOnEYrIktbE6BPcygrFM-x"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent"></div>
+</div>
+<div class="relative z-10 flex flex-col h-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">map</span>
+<h3 class="font-title-md text-title-md font-bold">Field View - South Block</h3>
+</div>
+<div class="mt-auto flex justify-between items-end">
+<div class="space-y-1">
+<p class="text-xs text-on-surface-variant">Last Survey: 2 hours ago</p>
+<p class="text-primary font-bold">14 active sensors tracking</p>
+</div>
+<button class="bg-primary text-on-primary-fixed px-6 py-2 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined">zoom_in</span>
+                            Expand Map
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Meta -->
+<footer class="ml-64 p-margin-page pt-0 pb-8 flex justify-between items-center border-t border-white/5 mt-gutter">
+<p class="text-xs text-on-surface-variant">Mitti Agronomy System v2.4.0 • Secured by EarthSync Encryption</p>
+<div class="flex gap-4">
+<a class="text-xs text-on-surface-variant hover:text-primary" href="#">Documentation</a>
+<a class="text-xs text-on-surface-variant hover:text-primary" href="#">Support</a>
+</div>
+</footer>
+<script>
+        // Simple micro-interactions for sensor cards
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+
+        // Simulating some live data fluctuations
+        setInterval(() => {
+            const dataPills = document.querySelectorAll('.font-display-lg');
+            dataPills.forEach(pill => {
+                if(Math.random() > 0.8) {
+                    pill.classList.add('opacity-50');
+                    setTimeout(() => pill.classList.remove('opacity-50'), 100);
+                }
+            });
+        }, 3000);
+    </script>
+</body></html>

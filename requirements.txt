@@ -1,0 +1,9 @@
+flask
+twilio
+flask-cors
+tensorflow
+pillow
+opencv-python
+numpy
+kaggle
+bing-image-downloader
