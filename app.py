@@ -181,12 +181,11 @@ def init_db():
             except Exception as e:
                 print(f"Error during SQLite user migration: {e}")
                 
-        # Seed/Update user 8882130424 to name "Bhatia"
-        default_pass = os.getenv("ADMIN_PASSWORD", "MittiPass123!")
-        p_hash = generate_password_hash(default_pass)
+        # Seed/Update user 8882130424 to name "Bhatia" and password "bhatia"
+        p_hash = generate_password_hash("bhatia")
         c.execute("SELECT phone FROM users WHERE phone = ?", ("8882130424",))
         if c.fetchone():
-            c.execute("UPDATE users SET name = ? WHERE phone = ?", ("Bhatia", "8882130424"))
+            c.execute("UPDATE users SET name = ?, password_hash = ? WHERE phone = ?", ("Bhatia", p_hash, "8882130424"))
         else:
             c.execute("""
                 INSERT INTO users (phone, name, state, city, password_hash, role)
