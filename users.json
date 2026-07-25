@@ -3,30 +3,40 @@
         "name": "Ramesh",
         "phone": "9876543210",
         "state": "Kerala",
-        "city": "Wayanad"
+        "city": "Wayanad",
+        "password_hash": "scrypt:32768:8:1$j7BTI4rW8ZDQZhqK$e9b61f35ce78f6a4df06e5faa9cb91933adc80555134e0759170660f7033d7905bbb80bc729eaa9c145f2ea29ec1d0f2a68f037f79209a54d54b54393aa8ecaa",
+        "role": "farmer"
     },
     "9876543211": {
         "name": "Ramesh",
         "phone": "9876543211",
         "state": "Rajasthan",
-        "city": "Jaipur"
+        "city": "Jaipur",
+        "password_hash": "scrypt:32768:8:1$uhDbukirRRISffzt$b77497c04e5a374e384409543966ce17afc8ace3d49bb5475c783d7f3c2da9a9956b05dcfbe1a8d0d3fd429ef7d2a4e953dbad542e509d229b4f0381896839fa",
+        "role": "farmer"
     },
     "7011881299": {
         "name": "Doctor Aris",
         "phone": "7011881299",
         "state": "Maharashtra",
-        "city": "Mumbai"
+        "city": "Mumbai",
+        "password_hash": "scrypt:32768:8:1$3B60cR0eTcYrejCB$8bfe870d9a1a88f6cd4c4b52dc6919c624c4cb4acaaf05ed2edfb5a18ba054ba07a5ab083ab79b9b749160a72a40b9cf791807fe8991adcfd3e68b5ff5b0e2dc",
+        "role": "admin"
     },
     "8882130424": {
         "name": "Eknoor Singh Bhatia",
         "phone": "8882130424",
         "state": "Delhi",
-        "city": "New Delhi"
+        "city": "New Delhi",
+        "password_hash": "scrypt:32768:8:1$F300w4khDhLjf9Ir$08da61d2a1a5d20216b181a6d3097a8ccf1de815385acbd53d25bd00bbac0f097915573cfabd0a63452f3e0199b1adb7373b44b7741d9dcfdd51614af5883353",
+        "role": "admin"
     },
     "1234567890": {
         "name": "Test User",
         "phone": "1234567890",
         "state": "Andhra Pradesh",
-        "city": "Anantapur"
+        "city": "Anantapur",
+        "password_hash": "scrypt:32768:8:1$TSx9YyjkjIKz5Azt$7cb1136bb9642a9c55ad9bae9f5124644622fa2ad5b3dc28e45e33e0fae0ca03d7e341fc79d343a95b9b8e5e23caa6c44381b587797845ee226fd07d2e898631",
+        "role": "farmer"
     }
 }

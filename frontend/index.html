@@ -38,12 +38,15 @@ function googleTranslateElementInit() {
                 <li id="tab-journey" onclick="switchTab('journey')"><i data-lucide="footprints"></i> My Journey</li>
             </ul>
 
-            <div class="farmer-profile">
-                <div class="avatar"></div>
-                <div class="info">
-                    <p class="name">Ramesh Kumar</p>
-                    <p class="location" id="userLocation">Jaipur, Rajasthan</p>
+            <div class="farmer-profile" style="display: flex; flex-direction: column; gap: 0.5rem; align-items: start; width: 100%; border-top: 1px solid var(--border); padding-top: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem; width: 100%;">
+                    <div class="avatar"></div>
+                    <div class="info">
+                        <p class="name" id="profileName">Farmer Profile</p>
+                        <p class="location" id="userLocation">Connecting...</p>
+                    </div>
                 </div>
+                <button id="logoutBtn" onclick="logoutUser()" style="width: 100%; background: #ef4444; border: none; padding: 0.5rem; border-radius: 6px; color: white; cursor: pointer; display: none; font-weight: bold; margin-top: 0.5rem;">Logout</button>
             </div>
         </nav>
 
@@ -468,6 +471,12 @@ function googleTranslateElementInit() {
                             <strong style="color: #34d399;">Recommended Solution:</strong>
                             <p id="resSolution" style="margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.5;"></p>
                         </div>
+                        <div id="aiWarningBanner" style="margin-top: 1.2rem; padding: 0.8rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; display: flex; align-items: center; gap: 0.5rem;">
+                            <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: #ef4444; flex-shrink: 0;"></i>
+                            <p style="margin: 0; font-size: 0.8rem; color: #fca5a5; line-height: 1.4;">
+                                <strong>Safety Warning:</strong> This is an AI-assisted recommendation. Please verify agricultural guidelines locally with an expert before applying chemical pesticides, herbicides, or fertilizers.
+                            </p>
+                        </div>
                         <button class="btn-primary" onclick="resetScanner()" style="margin-top: 1.5rem; background: #334155; border-color: #475569;">Scan Another</button>
                     </div>
                 </div>
@@ -559,9 +568,28 @@ function googleTranslateElementInit() {
             </div>
         </main>
 
-    <script src="app.js?v=6"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <!-- Authentication Overlay -->
+    <div id="loginOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem; width: 400px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); text-align: center;">
+            <i data-lucide="sprout" style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 1rem;"></i>
+            <h2 style="color: white; margin-bottom: 0.5rem;">Mitti Login</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Sign in to access your crop telemetry and edge scanner</p>
+            <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <div>
+                    <label style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">Phone Number</label>
+                    <input type="text" id="loginPhone" placeholder="Enter registered phone number" style="width: 100%; padding: 0.8rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 6px; color: white; border: 1px solid var(--border);">
+                </div>
+                <div>
+                    <label style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password" style="width: 100%; padding: 0.8rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 6px; color: white; border: 1px solid var(--border);">
+                </div>
+                <button onclick="loginUser()" style="background: var(--primary); color: white; border: none; padding: 0.8rem; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 0.5rem; transition: background 0.2s;">Login</button>
+            </div>
+            <p id="loginError" style="color: #ef4444; font-size: 0.85rem; margin-top: 1rem; display: none;"></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="advanced_logic.js"></script>
 </body>
 </html>

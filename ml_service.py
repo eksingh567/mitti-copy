@@ -52,9 +52,24 @@ class CropDiseaseClassifier:
                 
             # Deep Learning Pass (If TFLite model exists)
             if self.interpreter and self.class_indices:
-                # Resize to (224, 224) and convert BGR to RGB
-                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                img_resized = cv2.resize(img_rgb, (224, 224))
+                # Safe Image Resizing: scale down images larger than 1024x1024
+                h, w = img.shape[:2]
+                if h > 1024 or w > 1024:
+                    scale = 1024.0 / max(h, w)
+                    img_scaled = cv2.resize(img, (int(w * scale), int(h * scale)))
+                else:
+                    img_scaled = img.copy()
+                
+                # Apply CLAHE normalization to standardize lighting and shadows
+                lab = cv2.cvtColor(img_scaled, cv2.COLOR_BGR2LAB)
+                l_channel, a_channel, b_channel = cv2.split(lab)
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                cl = clahe.apply(l_channel)
+                img_equalized = cv2.merge((cl, a_channel, b_channel))
+                img_normalized = cv2.cvtColor(img_equalized, cv2.COLOR_LAB2RGB)
+                
+                # Resize to (224, 224)
+                img_resized = cv2.resize(img_normalized, (224, 224))
                 
                 # Input expects float32 tensor of shape (1, 224, 224, 3) in range [0, 255]
                 input_data = np.expand_dims(img_resized, axis=0).astype(np.float32)
@@ -83,6 +98,14 @@ class CropDiseaseClassifier:
                 
                 max_idx = np.argmax(predictions)
                 confidence = float(predictions[max_idx])
+                
+                # Unknown Disease Threshold Check (85%)
+                if confidence < 0.85:
+                    return {
+                        "disease": "Unknown Disease – Please consult an agricultural expert",
+                        "confidence": round(confidence * 100, 1),
+                        "solution": "The AI classifier is uncertain about the symptoms on this leaf. Please consult a local agricultural extension officer or farm school specialist."
+                    }
                 
                 predicted_class = idx_to_class.get(max_idx, "Unknown Disease")
                 

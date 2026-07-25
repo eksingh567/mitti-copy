@@ -1,5 +1,89 @@
 const API_URL = 'http://localhost:5000';
 let currentRecommendations = {};
+let currentLang = 'en';
+
+// Secure authenticated fetch helper
+async function authFetch(url, options = {}) {
+    const token = localStorage.getItem('access_token');
+    options.headers = options.headers || {};
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const res = await window.fetch(url, options);
+    if (res.status === 401 && !url.includes('/api/login')) {
+        logoutUser();
+        throw new Error("Session expired. Please login again.");
+    }
+    return res;
+}
+
+// Check session status on page load
+document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem('access_token');
+    const user = JSON.parse(localStorage.getItem('user_profile') || 'null');
+    
+    if (token && user) {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('profileName').textContent = user.name;
+        document.getElementById('logoutBtn').style.display = 'block';
+        fetchDashboardData();
+    } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('logoutBtn').style.display = 'none';
+    }
+});
+
+async function loginUser() {
+    const phone = document.getElementById('loginPhone').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    const errorEl = document.getElementById('loginError');
+    
+    if (!phone || !password) {
+        errorEl.textContent = "Please fill in all fields.";
+        errorEl.style.display = 'block';
+        return;
+    }
+    
+    try {
+        const res = await window.fetch(`${API_URL}/api/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ phone, password })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Login failed");
+        
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('user_profile', JSON.stringify(data.user));
+        
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('profileName').textContent = data.user.name;
+        document.getElementById('logoutBtn').style.display = 'block';
+        
+        // Refresh dashboard data
+        fetchDashboardData();
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+    }
+}
+
+async function logoutUser() {
+    try {
+        await window.fetch(`${API_URL}/api/logout`, { method: 'POST' });
+    } catch(e) {}
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_profile');
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('loginPhone').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginError').style.display = 'none';
+}
+
+
 
 // DOM Elements
 const dashboardWisdom = document.getElementById('dashboard-wisdom');
@@ -17,14 +101,14 @@ const cropsGrid = document.getElementById('cropsGrid');
 const cropDetailsPanel = document.getElementById('cropDetailsPanel');
 
 async function loadDemoData() {
-    await fetch(`${API_URL}/demo`);
+    await authFetch(`${API_URL}/demo`);
     await fetchDashboardData();
 }
 
 async function fetchDashboardData() {
     try {
         const state = stateSelect.value;
-        const res = await fetch(`${API_URL}/?state=${state}&lang=${currentLang}&t=${Date.now()}`);
+        const res = await authFetch(`${API_URL}/?state=${state}&lang=${currentLang}&t=${Date.now()}`);
         const data = await res.json();
         
         // Update basic metrics
@@ -94,14 +178,14 @@ async function loadRecommendations() {
             soilDisplay.innerHTML = `<span style="color: #fbbf24;">${soil} (Override)</span>`;
         } else {
             // If set back to Auto, we should re-fetch the real sensor data to update the display
-            fetch(`${API_URL}/?state=${state}&lang=${currentLang}&t=${Date.now()}`)
+            authFetch(`${API_URL}/?state=${state}&lang=${currentLang}&t=${Date.now()}`)
                 .then(r => r.json())
                 .then(data => {
                     soilDisplay.innerText = data.soil_profile || "Unknown";
                 });
         }
         
-        const res = await fetch(`${API_URL}/recommend?season=${season}&state=${state}&soil=${soil}&water=${water}&type=${type}&phenomenon=${phenomenon}&lang=${currentLang}&t=${Date.now()}`);
+        const res = await authFetch(`${API_URL}/recommend?season=${season}&state=${state}&soil=${soil}&water=${water}&type=${type}&phenomenon=${phenomenon}&lang=${currentLang}&t=${Date.now()}`);
 
 
         const data = await res.json();
@@ -222,7 +306,7 @@ function switchTab(tabId) {
 async function loadEncyclopedia() {
     try {
         encyclopediaGrid.innerHTML = '<div class="loading-pulse">Loading encyclopedia...</div>';
-        const res = await fetch(`${API_URL}/crops`);
+        const res = await authFetch(`${API_URL}/crops`);
         const crops = await res.json();
         
         encyclopediaGrid.innerHTML = '';
@@ -251,7 +335,7 @@ async function loadEncyclopedia() {
 async function loadHistory() {
     try {
         historyList.innerHTML = '<div class="loading-pulse">Loading history...</div>';
-        const res = await fetch(`${API_URL}/history`);
+        const res = await authFetch(`${API_URL}/history`);
         const history = await res.json();
         
         historyList.innerHTML = '';
@@ -287,7 +371,7 @@ async function submitYield(e) {
     const amount = document.getElementById('yieldAmount').value;
     
     try {
-        await fetch(`${API_URL}/history`, {
+        await authFetch(`${API_URL}/history`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ crop: crop, season: season, yield: amount })
@@ -306,7 +390,7 @@ async function makeEmergencyCall() {
         const state = stateSelect.value;
         const season = seasonSelect.value;
         alert("Initiating call to expert... Check Twilio logs!");
-        await fetch(`${API_URL}/call?state=${state}&season=${season}`);
+        await authFetch(`${API_URL}/call?state=${state}&season=${season}`);
     } catch(err) {
         console.error("Call failed", err);
     }
@@ -320,7 +404,7 @@ async function loadSmartSuggestions() {
     container.innerHTML = '<p style="color: #94a3b8;"><i data-lucide="loader" class="spin" style="width: 16px; height: 16px;"></i> Analyzing your crop history...</p>';
     
     try {
-        const res = await fetch(`${API_URL}/api/suggest-next`);
+        const res = await authFetch(`${API_URL}/api/suggest-next`);
         const data = await res.json();
         
         if (!data.suggestions || data.suggestions.length === 0) {
@@ -485,7 +569,7 @@ function handleSoilKnowledgeChange() {
 
 async function fetchSensorData() {
     try {
-        const res = await fetch(`${API_URL}/api/data`);
+        const res = await authFetch(`${API_URL}/api/data`);
         const data = await res.json();
         updateDashboard(data);
         
@@ -508,7 +592,7 @@ async function fetchSensorData() {
 
 async function fetchPlannerData() {
     try {
-        const res = await fetch(`${API_URL}/crops`);
+        const res = await authFetch(`${API_URL}/crops`);
         plannerCropsData = await res.json();
         populatePlannerDropdown();
         detectNextSeason();
@@ -719,7 +803,7 @@ function startSensorPolling() {
 
 async function fetchRealTimeSensors() {
     try {
-        const res = await fetch(`${API_URL}/api/sensors`);
+        const res = await authFetch(`${API_URL}/api/sensors`);
         if(!res.ok) return;
         const data = await res.json();
         
@@ -757,11 +841,19 @@ async function fetchRealTimeSensors() {
 
 async function toggleAutoIrrigate() {
     const toggle = document.getElementById('autoIrrigateToggle');
+    
+    // Pump control safety prompt
+    const confirmToggle = confirm("Are you sure you want to toggle the automated water pump irrigation status? This controls physical hardware locks.");
+    if (!confirmToggle) {
+        toggle.checked = !toggle.checked;
+        return;
+    }
+    
     try {
-        await fetch(`${API_URL}/api/irrigation/auto`, {
+        await authFetch(`${API_URL}/api/irrigation/auto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ auto_irrigate: toggle.checked })
+            body: JSON.stringify({ auto_irrigate: toggle.checked, confirm: true })
         });
         // Immediately fetch state
         fetchRealTimeSensors();
@@ -777,7 +869,7 @@ window.addEventListener('load', startSensorPolling);
 // --- Gov Schemes Logic ---
 async function loadSchemes() {
     try {
-        const res = await fetch(`${API_URL}/api/schemes`);
+        const res = await authFetch(`${API_URL}/api/schemes`);
         const schemes = await res.json();
         const container = document.getElementById('schemesContainer');
         if(!container) return;
@@ -832,7 +924,7 @@ async function startScan() {
     formData.append('image', uploadedFile);
     
     try {
-        const res = await fetch(`${API_URL}/api/scan-image`, {
+        const res = await authFetch(`${API_URL}/api/scan-image`, {
             method: 'POST',
             body: formData
         });
@@ -891,7 +983,7 @@ window.switchTab = function(tabId) {
 // --- Crop Journey Logic ---
 async function loadJourney() {
     try {
-        const res = await fetch(`${API_URL}/api/journey`);
+        const res = await authFetch(`${API_URL}/api/journey`);
         const data = await res.json();
         
         if (!data.active) {
@@ -1000,7 +1092,7 @@ async function startJourney() {
     }
     
     try {
-        const res = await fetch(`${API_URL}/api/journey/start`, {
+        const res = await authFetch(`${API_URL}/api/journey/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ crop, soil_type: soilType, start_date: startDate })
@@ -1021,7 +1113,7 @@ async function stopJourney() {
     
     try {
         console.log("Attempting to stop journey...");
-        const res = await fetch(`${API_URL}/api/journey/stop`, { 
+        const res = await authFetch(`${API_URL}/api/journey/stop`, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -1046,7 +1138,7 @@ async function stopJourney() {
 
 async function completeTask(taskId) {
     try {
-        await fetch(`${API_URL}/api/journey/complete-task`, {
+        await authFetch(`${API_URL}/api/journey/complete-task`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ task_id: taskId })
