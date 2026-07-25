@@ -180,6 +180,19 @@ def init_db():
                 os.rename("users.json", "users.json.bak")
             except Exception as e:
                 print(f"Error during SQLite user migration: {e}")
+                
+        # Seed/Update user 8882130424 to name "Bhatia"
+        default_pass = os.getenv("ADMIN_PASSWORD", "MittiPass123!")
+        p_hash = generate_password_hash(default_pass)
+        c.execute("SELECT phone FROM users WHERE phone = ?", ("8882130424",))
+        if c.fetchone():
+            c.execute("UPDATE users SET name = ? WHERE phone = ?", ("Bhatia", "8882130424"))
+        else:
+            c.execute("""
+                INSERT INTO users (phone, name, state, city, password_hash, role)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, ("8882130424", "Bhatia", "Delhi", "New Delhi", p_hash, "admin"))
+        conn.commit()
         conn.close()
 
 # Initialize database, integrity verify and back up
@@ -401,6 +414,47 @@ def admin_required(f):
     return decorated
 
 # ─── Auth Routes (v1 prefix included) ──────────────────────────────────
+@app.route("/api/register", methods=["POST"])
+@app.route("/api/v1/register", methods=["POST"])
+@limiter.limit("5 per minute")
+def register():
+    data = request.json or {}
+    phone = data.get("phone")
+    name = data.get("name")
+    password = data.get("password")
+    state = data.get("state", "Rajasthan")
+    city = data.get("city", "Jaipur")
+    
+    if not phone or not name or not password:
+        return jsonify({"error": "Phone, name, and password are required"}), 400
+        
+    conn = sqlite3.connect(DATABASE_FILE)
+    c = conn.cursor()
+    
+    # Check if user already exists
+    c.execute("SELECT phone FROM users WHERE phone = ?", (phone,))
+    if c.fetchone():
+        conn.close()
+        return jsonify({"error": "This phone number is already registered"}), 400
+        
+    p_hash = generate_password_hash(password)
+    # Check if user is a designated admin
+    role = "admin" if phone in ["8882130424", "7011881299"] else "farmer"
+    
+    try:
+        c.execute("""
+            INSERT INTO users (phone, name, state, city, password_hash, role)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (phone, name, state, city, p_hash, role))
+        conn.commit()
+        conn.close()
+        logger.info(f"User registration successful: {phone} | Name: {name}")
+        return jsonify({"status": "success", "message": "Registration successful. Please login now."}), 201
+    except Exception as e:
+        conn.close()
+        logger.error(f"Failed to register user {phone}: {e}")
+        return jsonify({"error": "Internal database error"}), 500
+
 @app.route("/api/login", methods=["POST"])
 @app.route("/api/v1/login", methods=["POST"])
 @limiter.limit("5 per minute")  # Enforce strict 5/min limit on login endpoint

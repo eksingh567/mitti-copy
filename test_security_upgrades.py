@@ -129,6 +129,20 @@ def test_security():
     assert r_anomaly.status_code == 400, "Error: Physical anomaly was not rejected!"
     assert "Anomaly" in r_anomaly.json().get("error", ""), "Error: Expected Anomaly error description!"
     
+    # 10. Test User Registration via /api/v1/register
+    print("\n[Test 10] Testing User Registration endpoint...")
+    reg_phone = f"999{int(time.time()) % 10000000}" # Generate dynamic phone number
+    reg_payload = {
+        "phone": reg_phone,
+        "name": "New Farmer Test",
+        "password": "secure_farmer_password_2026",
+        "state": "Maharashtra",
+        "city": "Pune"
+    }
+    r_reg = session.post(f"{API_URL}/register", json=reg_payload, headers={"X-Requested-With": "XMLHttpRequest"})
+    print(f"Status: {r_reg.status_code} | Response: {r_reg.json()}")
+    assert r_reg.status_code == 201, "Error: User registration endpoint failed!"
+    
     print("\n=== ALL SECURITY & RTR VERIFICATION TESTS PASSED ===\n")
 
 if __name__ == "__main__":

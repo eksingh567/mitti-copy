@@ -1185,3 +1185,62 @@ async function completeTask(taskId) {
         console.error("Failed to complete task", e);
     }
 }
+
+// Toggle between Login and Sign Up Forms
+function toggleAuthForm(formType) {
+    const errorEl = document.getElementById('loginError');
+    errorEl.style.display = 'none';
+    
+    if (formType === 'signup') {
+        document.getElementById('loginFormContainer').style.display = 'none';
+        document.getElementById('signupFormContainer').style.display = 'block';
+    } else {
+        document.getElementById('loginFormContainer').style.display = 'block';
+        document.getElementById('signupFormContainer').style.display = 'none';
+    }
+}
+
+// Register a new user and login automatically
+async function registerUser() {
+    const name = document.getElementById('signupName').value.trim();
+    const phone = document.getElementById('signupPhone').value.trim();
+    const password = document.getElementById('signupPassword').value.trim();
+    const errorEl = document.getElementById('loginError');
+    
+    if (!name || !phone || !password) {
+        errorEl.textContent = "All registration fields are required.";
+        errorEl.style.display = 'block';
+        return;
+    }
+    
+    try {
+        const res = await window.fetch(`${API_URL}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ name, phone, password })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Registration failed");
+        
+        // Auto-fill login fields
+        document.getElementById('loginPhone').value = phone;
+        document.getElementById('loginPassword').value = password;
+        
+        // Toggle view back to login and log in
+        toggleAuthForm('login');
+        
+        // Clear registration input fields
+        document.getElementById('signupName').value = '';
+        document.getElementById('signupPhone').value = '';
+        document.getElementById('signupPassword').value = '';
+        
+        await loginUser();
+    } catch(err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+    }
+}
