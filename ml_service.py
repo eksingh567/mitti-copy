@@ -4,6 +4,8 @@ import cv2
 import os
 import json
 import threading
+from PIL import Image, ImageOps
+import io
 
 class CropDiseaseClassifier:
     def __init__(self):
@@ -51,7 +53,20 @@ class CropDiseaseClassifier:
         the condition of the plant leaf instead of guessing.
         """
         try:
-            # 1. Convert bytes to OpenCV Image
+            # 1. Strip EXIF Metadata and Normalize Orientation (transpose rotated photos)
+            try:
+                pil_img = Image.open(io.BytesIO(image_bytes))
+                pil_img = ImageOps.exif_transpose(pil_img) # Auto-rotates image according to EXIF tags
+                
+                # Re-save to strip EXIF headers and tags
+                output_stream = io.BytesIO()
+                img_format = pil_img.format if pil_img.format else 'JPEG'
+                pil_img.save(output_stream, format=img_format)
+                image_bytes = output_stream.getvalue()
+            except Exception as exif_err:
+                print(f"EXIF parsing or rotation failed: {exif_err}")
+                
+            # 2. Convert bytes to OpenCV Image
             nparr = np.frombuffer(image_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             

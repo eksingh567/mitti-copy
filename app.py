@@ -1,7 +1,7 @@
 """
-MITTI — Secure Production Backend Server
+MITTI — Production Backend Server
 Flask + Crop Suitability Engine + Twilio Voice Call + SQLite Storage
-Samsung Solve for Tomorrow 2025 - Round 2 Security Upgrades
+Samsung Solve for Tomorrow 2025 - Round 3 Security Upgrades
 """
 
 import os
@@ -94,6 +94,28 @@ from ml_service import CropDiseaseClassifier
 db_lock = threading.Lock()
 DATABASE_FILE = "users.db"
 
+def backup_and_verify_db():
+    """
+    Runs integrity check on users.db on startup and duplicates it to users_backup.db.
+    """
+    if os.path.exists(DATABASE_FILE):
+        try:
+            conn = sqlite3.connect(DATABASE_FILE)
+            c = conn.cursor()
+            c.execute("PRAGMA integrity_check")
+            res = c.fetchone()
+            if res and res[0] == "ok":
+                # Create backup replica
+                backup_conn = sqlite3.connect("users_backup.db")
+                conn.backup(backup_conn)
+                backup_conn.close()
+                print("SQLite Database integrity verified: ok. Backup created successfully.")
+            else:
+                logger.warning("Security Alert: SQLite database integrity check failed. Corruption detected!")
+            conn.close()
+        except Exception as e:
+            print(f"Failed to backup database on startup: {e}")
+
 def init_db():
     with db_lock:
         conn = sqlite3.connect(DATABASE_FILE)
@@ -109,7 +131,33 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS devices (
+                device_id TEXT PRIMARY KEY,
+                secret TEXT NOT NULL,
+                last_seen TEXT,
+                firmware_version TEXT,
+                status TEXT NOT NULL
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                token_jti TEXT PRIMARY KEY,
+                phone TEXT NOT NULL,
+                status TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            )
+        """)
         conn.commit()
+        
+        # Seed default test device
+        c.execute("SELECT device_id FROM devices WHERE device_id = ?", ("esp8266_test_node_01",))
+        if not c.fetchone():
+            c.execute("""
+                INSERT INTO devices (device_id, secret, status)
+                VALUES (?, ?, ?)
+            """, ("esp8266_test_node_01", "mitti_esp8266_signing_secret_key_99", "active"))
+            conn.commit()
         
         # Migrate legacy users.json data if present
         if os.path.exists("users.json"):
@@ -134,8 +182,9 @@ def init_db():
                 print(f"Error during SQLite user migration: {e}")
         conn.close()
 
-# Initialize the SQLite database
+# Initialize database, integrity verify and back up
 init_db()
+backup_and_verify_db()
 
 # ─── Latest sensor data (in-memory state) ─────────────
 latest = {
@@ -351,8 +400,9 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ─── Auth Routes ──────────────────────────────────────
+# ─── Auth Routes (v1 prefix included) ──────────────────────────────────
 @app.route("/api/login", methods=["POST"])
+@app.route("/api/v1/login", methods=["POST"])
 @limiter.limit("5 per minute")  # Enforce strict 5/min limit on login endpoint
 def login():
     data = request.json or {}
@@ -373,6 +423,19 @@ def login():
         logger.warning(f"Security Alert: Failed login attempt for phone: {phone} from IP: {request.remote_addr}")
         return jsonify({"error": "Invalid phone number or password"}), 401
         
+    # Generate unique JTI for Refresh Token Rotation (RTR) tracking
+    refresh_jti = str(uuid.uuid4())
+    
+    # Save active refresh token JTI to SQLite
+    conn = sqlite3.connect(DATABASE_FILE)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO refresh_tokens (token_jti, phone, status, expires_at)
+        VALUES (?, ?, ?, ?)
+    """, (refresh_jti, phone, "active", (datetime.utcnow() + timedelta(days=30)).isoformat()))
+    conn.commit()
+    conn.close()
+
     # Generate secure access token (15 mins) and refresh token (30 days)
     access_token = jwt.encode({
         "phone": phone,
@@ -382,6 +445,7 @@ def login():
     
     refresh_token = jwt.encode({
         "phone": phone,
+        "jti": refresh_jti,
         "type": "refresh",
         "exp": datetime.utcnow() + timedelta(days=30)
     }, app.config["SECRET_KEY"], algorithm="HS256")
@@ -392,12 +456,13 @@ def login():
         "access_token": access_token
     }))
     
-    # Store access token in-memory only (do not set cookie). Set refresh token in HttpOnly cookie.
+    # Store access token in-memory only. Set refresh token in HttpOnly cookie.
     response.set_cookie('refresh_token', refresh_token, httponly=True, secure=False, samesite='Lax')
     
     return response
 
 @app.route("/api/refresh", methods=["POST"])
+@app.route("/api/v1/refresh", methods=["POST"])
 @limiter.limit("30 per minute")
 def refresh_token():
     r_token = request.cookies.get('refresh_token')
@@ -413,40 +478,82 @@ def refresh_token():
         if payload.get("type") != "refresh":
             return jsonify({"error": "Invalid token type"}), 401
             
-        # Get user details from SQLite db
+        jti = payload.get("jti")
+        phone = payload.get("phone")
+        
+        # Verify refresh token JTI in SQLite for reuse detection (RTR breach verification)
         conn = sqlite3.connect(DATABASE_FILE)
         c = conn.cursor()
-        c.execute("SELECT name, role FROM users WHERE phone = ?", (payload["phone"],))
+        c.execute("SELECT status FROM refresh_tokens WHERE token_jti = ?", (jti,))
+        token_row = c.fetchone()
+        
+        if not token_row:
+            conn.close()
+            logger.warning(f"Security Alert: Unknown refresh token JTI {jti} from IP: {request.remote_addr}")
+            return jsonify({"error": "Invalid refresh token"}), 401
+            
+        if token_row[0] == "revoked":
+            # Token reuse detected! Invalidate ALL refresh tokens for the user (breach response)
+            c.execute("UPDATE refresh_tokens SET status = 'revoked' WHERE phone = ?", (phone,))
+            conn.commit()
+            conn.close()
+            logger.warning(f"Security Alert: Refresh Token Reuse detected (JTI {jti})! Session hijack threat block. All user sessions revoked.")
+            return jsonify({"error": "Session hijacked: Token reuse detected. Please re-authenticate."}), 401
+            
+        # Revoke the used refresh token
+        c.execute("UPDATE refresh_tokens SET status = 'revoked' WHERE token_jti = ?", (jti,))
+        
+        # Issue new JTI for rotated refresh token
+        new_refresh_jti = str(uuid.uuid4())
+        c.execute("""
+            INSERT INTO refresh_tokens (token_jti, phone, status, expires_at)
+            VALUES (?, ?, ?, ?)
+        """, (new_refresh_jti, phone, "active", (datetime.utcnow() + timedelta(days=30)).isoformat()))
+        
+        # Fetch user role/details
+        c.execute("SELECT name, role FROM users WHERE phone = ?", (phone,))
         user_row = c.fetchone()
+        conn.commit()
         conn.close()
         
         if not user_row:
              return jsonify({"error": "User not found"}), 401
              
-        # Issue new access token (15 mins)
+        # Issue rotated refresh token & new access token
         access_token = jwt.encode({
-            "phone": payload["phone"],
+            "phone": phone,
             "role": user_row[1],
             "exp": datetime.utcnow() + timedelta(minutes=15)
         }, app.config["SECRET_KEY"], algorithm="HS256")
         
-        return jsonify({
+        new_refresh_token = jwt.encode({
+            "phone": phone,
+            "jti": new_refresh_jti,
+            "type": "refresh",
+            "exp": datetime.utcnow() + timedelta(days=30)
+        }, app.config["SECRET_KEY"], algorithm="HS256")
+        
+        response = make_response(jsonify({
             "access_token": access_token,
             "user": {"name": user_row[0], "role": user_row[1]}
-        })
+        }))
+        response.set_cookie('refresh_token', new_refresh_token, httponly=True, secure=False, samesite='Lax')
+        return response
     except Exception as e:
-        logger.warning(f"Security Alert: Failed silent token refresh due to invalid/expired refresh token: {str(e)}")
+        logger.warning(f"Security Alert: Silent refresh token rotation failed: {str(e)}")
         return jsonify({"error": "Invalid or expired refresh token"}), 401
 
 @app.route("/api/logout", methods=["POST"])
+@app.route("/api/v1/logout", methods=["POST"])
 def logout():
     response = make_response(jsonify({"status": "success", "message": "Logged out"}))
     response.delete_cookie('refresh_token')
     session.clear()
     return response
 
-# ─── Core API Endpoints ────────────────────────────────
+# ─── Core API Endpoints (v1 prefixes mapped) ───────────────────────────
 @app.route("/")
+@app.route("/api/v1/")
 @jwt_required
 @limiter.limit("120 per minute")
 def dashboard():
@@ -466,6 +573,7 @@ def dashboard():
     })
 
 @app.route("/recommend")
+@app.route("/api/v1/recommend")
 @jwt_required
 def recommend():
     season = request.args.get("season", "Rabi")
@@ -509,6 +617,7 @@ def recommend():
     return jsonify(results)
 
 @app.route("/demo")
+@app.route("/api/v1/demo")
 @admin_required
 def demo():
     global latest
@@ -541,6 +650,7 @@ iot_state = {
 }
 
 @app.route("/api/sensors", methods=["GET", "POST"])
+@app.route("/api/v1/sensors", methods=["GET", "POST"])
 @limiter.limit("60 per minute")  # Limit sensors to 60/min
 def api_sensors():
     global latest
@@ -549,15 +659,29 @@ def api_sensors():
         signature = request.headers.get("X-Signature")
         nonce = request.headers.get("X-Nonce")
         timestamp = request.headers.get("X-Timestamp")
-        
-        hmac_secret = os.getenv("ESP8266_HMAC_SECRET", "mitti_esp8266_signing_secret_key_99").encode()
+        device_id = request.headers.get("X-Device-ID", "esp8266_test_node_01")
+        firmware = request.headers.get("X-Firmware-Version", "1.0.0")
         
         if not signature or not nonce or not timestamp:
             logger.warning(f"Security Alert: Invalid HMAC parameters from IP: {request.remote_addr}")
             return jsonify({"error": "Missing HMAC security parameters"}), 401
             
-        # Prevent replay attacks
+        # Fetch device registration secret and verify active status
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        c.execute("SELECT secret, status FROM devices WHERE device_id = ?", (device_id,))
+        device_row = c.fetchone()
+        
+        if not device_row or device_row[1] != "active":
+            conn.close()
+            logger.warning(f"Security Alert: Blocked telemetry upload from unauthorized/revoked device ID: {device_id} from IP: {request.remote_addr}")
+            return jsonify({"error": "Unauthorized device"}), 403
+            
+        hmac_secret = device_row[0].encode()
+            
+        # Prevent replay attacks using deque+set eviction cache
         if not is_valid_nonce(nonce, timestamp):
+            conn.close()
             logger.warning(f"Security Alert: Replay attack blocked (nonce: {nonce}, timestamp: {timestamp}) from IP: {request.remote_addr}")
             return jsonify({"error": "Replay attack detected or request timestamp expired"}), 400
             
@@ -567,15 +691,23 @@ def api_sensors():
         message = f"{nonce}:{timestamp}:{request.data.decode()}".encode()
         expected_sig = hmac.new(hmac_secret, message, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected_sig, signature):
-            logger.warning(f"Security Alert: HMAC signature mismatch from IP: {request.remote_addr}")
+            conn.close()
+            logger.warning(f"Security Alert: HMAC signature mismatch from device: {device_id} IP: {request.remote_addr}")
             return jsonify({"error": "HMAC signature mismatch"}), 401
             
         # Validate range and anomaly checking rules
         is_valid, err_msg = validate_sensor_payload(data)
         if not is_valid:
+            conn.close()
             logger.warning(f"Security Alert: Sensor anomaly check blocked payload from IP: {request.remote_addr} ({err_msg})")
             return jsonify({"error": f"Sensor verification failed: {err_msg}"}), 400
             
+        # Log successful telemetry and update last seen in SQLite
+        c.execute("UPDATE devices SET last_seen = ?, firmware_version = ? WHERE device_id = ?", 
+                  (datetime.utcnow().isoformat(), firmware, device_id))
+        conn.commit()
+        conn.close()
+
         # Update state
         latest.update({
             "n": int(data.get("n", latest["n"])),
@@ -609,6 +741,7 @@ def api_sensors():
     })
 
 @app.route("/api/irrigation/auto", methods=["POST"])
+@app.route("/api/v1/irrigation/auto", methods=["POST"])
 @admin_required
 def toggle_auto_irrigate():
     data = request.json or {}
@@ -629,6 +762,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/api/scan-image", methods=["POST"])
+@app.route("/api/v1/scan-image", methods=["POST"])
 @limiter.limit("20 per minute")  # Limit scanner uploads to 20/min
 @jwt_required
 def scan_image():
@@ -703,6 +837,7 @@ def save_history(data):
         with open(HISTORY_FILE, "w") as f: json.dump(data, f, indent=4)
 
 @app.route("/history", methods=["GET", "POST"])
+@app.route("/api/v1/history", methods=["GET", "POST"])
 @jwt_required
 def history_api():
     if request.method == "POST":
@@ -722,11 +857,13 @@ def history_api():
     return jsonify(load_history())
 
 @app.route("/crops")
+@app.route("/api/v1/crops")
 @jwt_required
 def get_all_crops():
     return jsonify(crop_profiles)
 
 @app.route("/api/schemes", methods=["GET"])
+@app.route("/api/v1/schemes", methods=["GET"])
 @jwt_required
 def get_schemes():
     return jsonify([
@@ -735,6 +872,7 @@ def get_schemes():
     ])
 
 @app.route("/api/suggest-next", methods=["GET"])
+@app.route("/api/v1/suggest-next", methods=["GET"])
 @jwt_required
 def suggest_next_crop():
     history = load_history()
@@ -742,7 +880,6 @@ def suggest_next_crop():
         return jsonify({"suggestions": [], "message": "Log your first yield."})
     
     last_crop = history[-1].get("crop", "").strip()
-    upcoming_season = "Rabi"
     
     suggestions = []
     rotation = rotation_rules.get(last_crop, None)

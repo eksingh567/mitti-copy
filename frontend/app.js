@@ -36,7 +36,7 @@ async function authFetch(url, options = {}) {
 
 async function refreshSession() {
     try {
-        const res = await window.fetch(`${API_URL}/api/refresh`, { 
+        const res = await window.fetch(`${API_URL}/api/v1/refresh`, { 
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
@@ -77,7 +77,7 @@ async function loginUser() {
     }
     
     try {
-        const res = await window.fetch(`${API_URL}/api/login`, {
+        const res = await window.fetch(`${API_URL}/api/v1/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ async function loginUser() {
 
 async function logoutUser() {
     try {
-        await window.fetch(`${API_URL}/api/logout`, { 
+        await window.fetch(`${API_URL}/api/v1/logout`, { 
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
@@ -138,7 +138,7 @@ const cropsGrid = document.getElementById('cropsGrid');
 const cropDetailsPanel = document.getElementById('cropDetailsPanel');
 
 async function loadDemoData() {
-    await authFetch(`${API_URL}/demo`);
+    await authFetch(`${API_URL}/api/v1/demo`);
     await fetchDashboardData();
 }
 
@@ -343,7 +343,7 @@ function switchTab(tabId) {
 async function loadEncyclopedia() {
     try {
         encyclopediaGrid.innerHTML = '<div class="loading-pulse">Loading encyclopedia...</div>';
-        const res = await authFetch(`${API_URL}/crops`);
+        const res = await authFetch(`${API_URL}/api/v1/crops`);
         const crops = await res.json();
         
         encyclopediaGrid.innerHTML = '';
@@ -372,7 +372,7 @@ async function loadEncyclopedia() {
 async function loadHistory() {
     try {
         historyList.innerHTML = '<div class="loading-pulse">Loading history...</div>';
-        const res = await authFetch(`${API_URL}/history`);
+        const res = await authFetch(`${API_URL}/api/v1/history`);
         const history = await res.json();
         
         historyList.innerHTML = '';
@@ -408,7 +408,7 @@ async function submitYield(e) {
     const amount = document.getElementById('yieldAmount').value;
     
     try {
-        await authFetch(`${API_URL}/history`, {
+        await authFetch(`${API_URL}/api/v1/history`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ crop: crop, season: season, yield: amount })
@@ -441,7 +441,7 @@ async function loadSmartSuggestions() {
     container.innerHTML = '<p style="color: #94a3b8;"><i data-lucide="loader" class="spin" style="width: 16px; height: 16px;"></i> Analyzing your crop history...</p>';
     
     try {
-        const res = await authFetch(`${API_URL}/api/suggest-next`);
+        const res = await authFetch(`${API_URL}/api/v1/suggest-next`);
         const data = await res.json();
         
         if (!data.suggestions || data.suggestions.length === 0) {
@@ -629,7 +629,7 @@ async function fetchSensorData() {
 
 async function fetchPlannerData() {
     try {
-        const res = await authFetch(`${API_URL}/crops`);
+        const res = await authFetch(`${API_URL}/api/v1/crops`);
         plannerCropsData = await res.json();
         populatePlannerDropdown();
         detectNextSeason();
@@ -840,7 +840,7 @@ function startSensorPolling() {
 
 async function fetchRealTimeSensors() {
     try {
-        const res = await authFetch(`${API_URL}/api/sensors`);
+        const res = await authFetch(`${API_URL}/api/v1/sensors`);
         if(!res.ok) return;
         const data = await res.json();
         
@@ -887,7 +887,7 @@ async function toggleAutoIrrigate() {
     }
     
     try {
-        await authFetch(`${API_URL}/api/irrigation/auto`, {
+        await authFetch(`${API_URL}/api/v1/irrigation/auto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ auto_irrigate: toggle.checked, confirm: true })
@@ -906,7 +906,7 @@ window.addEventListener('load', startSensorPolling);
 // --- Gov Schemes Logic ---
 async function loadSchemes() {
     try {
-        const res = await authFetch(`${API_URL}/api/schemes`);
+        const res = await authFetch(`${API_URL}/api/v1/schemes`);
         const schemes = await res.json();
         const container = document.getElementById('schemesContainer');
         if(!container) return;
@@ -961,7 +961,7 @@ async function startScan() {
     formData.append('image', uploadedFile);
     
     try {
-        const res = await authFetch(`${API_URL}/api/scan-image`, {
+        const res = await authFetch(`${API_URL}/api/v1/scan-image`, {
             method: 'POST',
             body: formData
         });
@@ -1020,7 +1020,7 @@ window.switchTab = function(tabId) {
 // --- Crop Journey Logic ---
 async function loadJourney() {
     try {
-        const res = await authFetch(`${API_URL}/api/journey`);
+        const res = await authFetch(`${API_URL}/api/v1/journey`);
         const data = await res.json();
         
         if (!data.active) {
@@ -1129,7 +1129,7 @@ async function startJourney() {
     }
     
     try {
-        const res = await authFetch(`${API_URL}/api/journey/start`, {
+        const res = await authFetch(`${API_URL}/api/v1/journey/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ crop, soil_type: soilType, start_date: startDate })
@@ -1150,7 +1150,7 @@ async function stopJourney() {
     
     try {
         console.log("Attempting to stop journey...");
-        const res = await authFetch(`${API_URL}/api/journey/stop`, { 
+        const res = await authFetch(`${API_URL}/api/v1/journey/stop`, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -1175,7 +1175,7 @@ async function stopJourney() {
 
 async function completeTask(taskId) {
     try {
-        await authFetch(`${API_URL}/api/journey/complete-task`, {
+        await authFetch(`${API_URL}/api/v1/journey/complete-task`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ task_id: taskId })
