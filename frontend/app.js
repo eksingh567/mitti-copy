@@ -2,33 +2,64 @@ const API_URL = 'http://localhost:5000';
 let currentRecommendations = {};
 let currentLang = 'en';
 
-// Secure authenticated fetch helper
+// In-Memory JWT Access Token Storage (Critical OWASP vulnerability fix: keeps access token out of localStorage)
+let accessToken = null;
+
+// Secure authenticated fetch helper with automatic token refresh and CSRF headers
 async function authFetch(url, options = {}) {
-    const token = localStorage.getItem('access_token');
     options.headers = options.headers || {};
-    if (token) {
-        options.headers['Authorization'] = `Bearer ${token}`;
+    
+    // Add custom CSRF header check to prevent cross-site request forgery
+    options.headers['X-Requested-With'] = 'XMLHttpRequest';
+    
+    if (accessToken) {
+        options.headers['Authorization'] = `Bearer ${accessToken}`;
     }
     
     const res = await window.fetch(url, options);
-    if (res.status === 401 && !url.includes('/api/login')) {
-        logoutUser();
-        throw new Error("Session expired. Please login again.");
+    if (res.status === 401 && !url.includes('/api/login') && !url.includes('/api/refresh')) {
+        // Access token expired, attempt silent rotation using refresh cookie
+        try {
+            await refreshSession();
+            // Retry the original request
+            if (accessToken) {
+                options.headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+            return await window.fetch(url, options);
+        } catch(err) {
+            logoutUser();
+            throw new Error("Session expired. Please login again.");
+        }
     }
     return res;
 }
 
-// Check session status on page load
-document.addEventListener("DOMContentLoaded", () => {
-    const token = localStorage.getItem('access_token');
-    const user = JSON.parse(localStorage.getItem('user_profile') || 'null');
-    
-    if (token && user) {
+async function refreshSession() {
+    try {
+        const res = await window.fetch(`${API_URL}/api/refresh`, { 
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!res.ok) throw new Error("Silent refresh failed");
+        
+        const data = await res.json();
+        accessToken = data.access_token;
+        localStorage.setItem('user_profile', JSON.stringify(data.user));
+        
         document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('profileName').textContent = user.name;
+        document.getElementById('profileName').textContent = data.user.name;
         document.getElementById('logoutBtn').style.display = 'block';
+    } catch(e) {
+        throw e;
+    }
+}
+
+// Check session status on page load
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        await refreshSession();
         fetchDashboardData();
-    } else {
+    } catch (err) {
         document.getElementById('loginOverlay').style.display = 'flex';
         document.getElementById('logoutBtn').style.display = 'none';
     }
@@ -48,14 +79,17 @@ async function loginUser() {
     try {
         const res = await window.fetch(`${API_URL}/api/login`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: JSON.stringify({ phone, password })
         });
         
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Login failed");
         
-        localStorage.setItem('access_token', data.access_token);
+        accessToken = data.access_token;
         localStorage.setItem('user_profile', JSON.stringify(data.user));
         
         document.getElementById('loginOverlay').style.display = 'none';
@@ -72,9 +106,12 @@ async function loginUser() {
 
 async function logoutUser() {
     try {
-        await window.fetch(`${API_URL}/api/logout`, { method: 'POST' });
+        await window.fetch(`${API_URL}/api/logout`, { 
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
     } catch(e) {}
-    localStorage.removeItem('access_token');
+    accessToken = null;
     localStorage.removeItem('user_profile');
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('logoutBtn').style.display = 'none';

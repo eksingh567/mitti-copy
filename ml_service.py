@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import os
 import json
+import threading
 
 class CropDiseaseClassifier:
     def __init__(self):
@@ -10,6 +11,7 @@ class CropDiseaseClassifier:
         self.is_loaded = True
         self.model = None
         self.class_indices = None
+        self.lock = threading.Lock()
         
         # Try to load Deep Learning TFLite model if it exists
         model_path = 'crop_disease_model.tflite'
@@ -32,6 +34,12 @@ class CropDiseaseClassifier:
                 with open(class_indices_path, 'r') as f:
                     self.class_indices = json.load(f)
                 print("Successfully loaded Deep Learning TFLite Model!")
+                
+                # Warm up the interpreter on startup to pre-allocate memory and initialize caches
+                dummy_input = np.zeros(self.input_details[0]['shape'], dtype=np.float32)
+                self.interpreter.set_tensor(self.input_details[0]['index'], dummy_input)
+                self.interpreter.invoke()
+                print("TFLite Interpreter warmed up successfully!")
             except Exception as e:
                 print(f"Failed to load Deep Learning TFLite Model, falling back to OpenCV: {e}")
         else:
@@ -74,9 +82,11 @@ class CropDiseaseClassifier:
                 # Input expects float32 tensor of shape (1, 224, 224, 3) in range [0, 255]
                 input_data = np.expand_dims(img_resized, axis=0).astype(np.float32)
                 
-                self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
-                self.interpreter.invoke()
-                predictions = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+                # Thread-safe inference execution using local Lock context
+                with self.lock:
+                    self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
+                    self.interpreter.invoke()
+                    predictions = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
                 
                 # Apply Temperature Scaling calibration (T = 0.3) to combat label-smoothing flattening
                 # This sharpens the distribution to restore realistic confidence scores for the top predictions.
@@ -96,18 +106,31 @@ class CropDiseaseClassifier:
                     print(f"  {i+1}. Class: {idx_to_class[idx]} | Confidence: {predictions[idx]*100:.1f}%")
                 print("==================================\n")
                 
-                max_idx = np.argmax(predictions)
-                confidence = float(predictions[max_idx])
+                # Extract top 2 classifications to calculate confidence margin gap
+                sorted_indices = np.argsort(predictions)[::-1]
+                top1_idx = sorted_indices[0]
+                top2_idx = sorted_indices[1]
                 
-                # Unknown Disease Threshold Check (85%)
-                if confidence < 0.85:
+                top1_conf = float(predictions[top1_idx])
+                top2_conf = float(predictions[top2_idx])
+                
+                # Unknown Disease Threshold Check (85% absolute confidence)
+                if top1_conf < 0.85:
                     return {
                         "disease": "Unknown Disease – Please consult an agricultural expert",
-                        "confidence": round(confidence * 100, 1),
+                        "confidence": round(top1_conf * 100, 1),
                         "solution": "The AI classifier is uncertain about the symptoms on this leaf. Please consult a local agricultural extension officer or farm school specialist."
                     }
                 
-                predicted_class = idx_to_class.get(max_idx, "Unknown Disease")
+                # Confidence Margin Check (10% relative gap check to block ambiguous predictions)
+                if (top1_conf - top2_conf) < 0.10:
+                    return {
+                        "disease": "Unknown Disease – Please consult an agricultural expert",
+                        "confidence": round(top1_conf * 100, 1),
+                        "solution": "The AI classifier matches multiple potential diseases with very close probabilities, indicating classification ambiguity. Please consult an agricultural expert."
+                    }
+                
+                predicted_class = idx_to_class.get(top1_idx, "Unknown Disease")
                 
                 # Dynamic confidence grouping for related symptoms to prevent split probability drops
                 group_keywords = ["rust", "blight", "rot", "spot", "healthy", "mildew", "virus", "canker", "aphid", "mite"]

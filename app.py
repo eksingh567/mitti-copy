@@ -1,7 +1,7 @@
 """
-MITTI — Production Backend Server
-Flask + Crop Suitability Engine + Twilio Voice Call + Dynamic Wisdom
-Samsung Solve for Tomorrow 2025 - Refactored for Enterprise Security
+MITTI — Secure Production Backend Server
+Flask + Crop Suitability Engine + Twilio Voice Call + SQLite Storage
+Samsung Solve for Tomorrow 2025 - Round 2 Security Upgrades
 """
 
 import os
@@ -14,6 +14,8 @@ import hashlib
 import uuid
 import logging
 import threading
+import sqlite3
+from collections import deque
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -40,7 +42,6 @@ class RedactingFormatter(logging.Formatter):
         message = super().format(record)
         for secret in self.secrets:
             if secret in message.lower():
-                # Redact matched lines containing credentials
                 message = "[REDACTED LOG ENTRY CONTAINING SECRETS]"
         return message
 
@@ -75,9 +76,15 @@ Talisman(app,
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["200 per day", "120 per hour"],
     storage_uri="memory://"
 )
+
+# Custom Rate Limit Exceeded Logger
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    logger.warning(f"Security Alert: Rate limit exceeded by IP: {request.remote_addr} on route: {request.path}")
+    return jsonify(error="Rate limit exceeded. Please slow down."), 429
 
 # Import extracted agronomic profiles data
 from crop_profiles import crop_profiles, STATE_TO_REGION, STATE_SOIL_TYPES, rotation_rules
@@ -85,31 +92,50 @@ from ml_service import CropDiseaseClassifier
 
 # Thread lock for file operations
 db_lock = threading.Lock()
+DATABASE_FILE = "users.db"
 
-# Load users file safely and initialize credentials if needed
-USERS_FILE = "users.json"
-DEFAULT_PASS = os.getenv("ADMIN_PASSWORD", "MittiPass123!")
-
-def load_users():
+def init_db():
     with db_lock:
-        if os.path.exists(USERS_FILE):
-            with open(USERS_FILE, "r", encoding="utf-8") as f:
-                users = json.load(f)
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                phone TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                state TEXT NOT NULL,
+                city TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        
+        # Migrate legacy users.json data if present
+        if os.path.exists("users.json"):
+            try:
+                with open("users.json", "r", encoding="utf-8") as f:
+                    legacy_users = json.load(f)
                 
-            # Enforce password hashes for users
-            modified = False
-            for phone, data in users.items():
-                if "password_hash" not in data:
-                    data["password_hash"] = generate_password_hash(DEFAULT_PASS)
-                    data["role"] = "admin" if phone in ["8882130424", "7011881299"] else "farmer"
-                    modified = True
-            if modified:
-                with open(USERS_FILE, "w", encoding="utf-8") as f:
-                    json.dump(users, f, indent=4)
-            return users
-        return {}
+                default_pass = os.getenv("ADMIN_PASSWORD", "MittiPass123!")
+                for phone, u in legacy_users.items():
+                    c.execute("SELECT phone FROM users WHERE phone = ?", (phone,))
+                    if not c.fetchone():
+                        p_hash = u.get("password_hash") or generate_password_hash(default_pass)
+                        role = "admin" if phone in ["8882130424", "7011881299"] else "farmer"
+                        c.execute("""
+                            INSERT INTO users (phone, name, state, city, password_hash, role)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (phone, u["name"], u["state"], u["city"], p_hash, role))
+                conn.commit()
+                print("Successfully migrated users to SQLite DB.")
+                os.rename("users.json", "users.json.bak")
+            except Exception as e:
+                print(f"Error during SQLite user migration: {e}")
+        conn.close()
 
-users_db = load_users()
+# Initialize the SQLite database
+init_db()
 
 # ─── Latest sensor data (in-memory state) ─────────────
 latest = {
@@ -121,35 +147,40 @@ latest = {
     "timestamp": None
 }
 
-# ─── Replay Attack sliding cache ──────────────────────
-seen_nonces = {}  # nonce -> expiry_time
+# ─── Fast Nonce cache: set for O(1) checks, deque for eviction ──
+seen_nonces = set()
+nonce_queue = deque()
 
 def is_valid_nonce(nonce, timestamp_str):
     try:
         timestamp = float(timestamp_str)
         now = time.time()
-        # Reject if request is older than 30 seconds
+        
+        # Reject if request timestamp is older than 30 seconds
         if abs(now - timestamp) > 30.0:
+            logger.warning(f"Security Alert: Replay attack prevention - Expired timestamp {timestamp} from client (current: {now})")
             return False
         
-        # Check for replay duplicate
+        # Check for replay duplicate in O(1) set lookup
         if nonce in seen_nonces:
+            logger.warning(f"Security Alert: Replay attack prevention - Duplicate nonce detected: {nonce}")
             return False
             
-        # Cache nonce until expiration window has passed
-        seen_nonces[nonce] = now + 30.0
+        # Add to set and sliding queue cache
+        seen_nonces.add(nonce)
+        nonce_queue.append((nonce, now + 30.0))
         
-        # Prune expired nonces periodically
-        expired = [n for n, exp in seen_nonces.items() if now > exp]
-        for n in expired:
-            del seen_nonces[n]
+        # Evict expired nonces efficiently
+        while nonce_queue and now > nonce_queue[0][1]:
+            expired_nonce, _ = nonce_queue.popleft()
+            seen_nonces.discard(expired_nonce)
             
         return True
     except Exception as e:
         logger.error(f"Error validating nonce: {e}")
         return False
 
-# ─── Sensor Validation Module ─────────────────────────
+# ─── Sensor Validation with Anomaly Checking ──────────
 def validate_sensor_payload(data):
     try:
         moisture = float(data.get("moisture", 0))
@@ -158,13 +189,25 @@ def validate_sensor_payload(data):
         p = float(data.get("p", 0))
         k = float(data.get("k", 0))
         ec = float(data.get("ec", 0.0))
+        temp = float(data.get("temp", 25.0))
+        humidity = float(data.get("humidity", 50.0))
+        raining = bool(data.get("raining", False))
         
-        # Physical constraints check
+        # Range constraints check
         if not (0.0 <= moisture <= 100.0): return False, "Moisture must be in range 0-100%"
         if not (0.0 <= ph <= 14.0): return False, "pH must be in range 0-14"
         if n < 0 or p < 0 or k < 0: return False, "NPK macronutrients cannot be negative"
         if ec < 0: return False, "Electrical conductivity cannot be negative"
         
+        # Cross-sensor physical anomaly checking
+        # Anomaly 1: Temp & Humidity high, but Rain is False (Sensor defect / impossible field state)
+        if humidity > 95.0 and temp > 40.0 and not raining:
+            return False, "Anomaly: Humidity >95% with Temperature >40C but Rain is False represents an invalid physical state."
+            
+        # Anomaly 2: EC is 0 but Moisture is 100% (Water saturated soil always conducts via natural salts)
+        if ec == 0.0 and moisture == 100.0:
+            return False, "Anomaly: Fully saturated moisture (100%) cannot have zero electrical conductivity."
+            
         return True, "Valid"
     except Exception as e:
         return False, f"Format conversion error: {str(e)}"
@@ -235,7 +278,6 @@ def generate_wisdom(lang="en"):
     return f"{context} {practice} on {crop} fields {benefit}."
 
 def get_greeting(state="Rajasthan", lang="en"):
-    hour = datetime.now().hour
     greetings = {
         "Punjab": "Sat Sri Akal",
         "Haryana": "Ram Ram",
@@ -258,7 +300,6 @@ def get_greeting(state="Rajasthan", lang="en"):
     return f"{greetings.get(state, 'Namaste')}!"
 
 def calculate_suitability(crop, sensor, season, region, state="Rajasthan", lang="en"):
-    # Mock details return for recommendation calculations
     return 80, {"score": 80, "feedback_list": ["Optimal crop range matches."]}
 
 def detect_soil_profile(sensor, state="Rajasthan", lang="en"):
@@ -270,14 +311,22 @@ def jwt_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
+        # Enforce Bearer token verification
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             if auth_header.startswith("Bearer "):
                 token = auth_header.split(" ")[1]
         
+        # Cookie session fallback
         if not token:
             token = request.cookies.get('access_token') or session.get('access_token')
-            
+            if token:
+                # CSRF protection check: require custom X-Requested-With header for cookie-based calls
+                csrf_header = request.headers.get("X-Requested-With")
+                if not csrf_header or csrf_header.lower() != "xmlhttprequest":
+                    logger.warning(f"Security Alert: CSRF block - Missing custom headers from IP: {request.remote_addr}")
+                    return jsonify({"error": "CSRF verification failed"}), 403
+        
         if not token:
             return jsonify({"error": "Authentication token missing"}), 401
             
@@ -304,7 +353,7 @@ def admin_required(f):
 
 # ─── Auth Routes ──────────────────────────────────────
 @app.route("/api/login", methods=["POST"])
-@limiter.limit("10 per minute")
+@limiter.limit("5 per minute")  # Enforce strict 5/min limit on login endpoint
 def login():
     data = request.json or {}
     phone = data.get("phone")
@@ -313,15 +362,21 @@ def login():
     if not phone or not password:
         return jsonify({"error": "Phone number and password required"}), 400
         
-    users = load_users()
-    user = users.get(phone)
-    if not user or not check_password_hash(user["password_hash"], password):
+    # Read user credentials from SQLite database
+    conn = sqlite3.connect(DATABASE_FILE)
+    c = conn.cursor()
+    c.execute("SELECT name, password_hash, role FROM users WHERE phone = ?", (phone,))
+    user_row = c.fetchone()
+    conn.close()
+    
+    if not user_row or not check_password_hash(user_row[1], password):
+        logger.warning(f"Security Alert: Failed login attempt for phone: {phone} from IP: {request.remote_addr}")
         return jsonify({"error": "Invalid phone number or password"}), 401
         
     # Generate secure access token (15 mins) and refresh token (30 days)
     access_token = jwt.encode({
         "phone": phone,
-        "role": user.get("role", "farmer"),
+        "role": user_row[2],
         "exp": datetime.utcnow() + timedelta(minutes=15)
     }, app.config["SECRET_KEY"], algorithm="HS256")
     
@@ -333,20 +388,59 @@ def login():
     
     response = make_response(jsonify({
         "status": "success",
-        "user": {"name": user["name"], "role": user.get("role", "farmer")},
+        "user": {"name": user_row[0], "role": user_row[2]},
         "access_token": access_token
     }))
     
-    # Set cookies securely
-    response.set_cookie('access_token', access_token, httponly=True, secure=True, samesite='Lax')
-    response.set_cookie('refresh_token', refresh_token, httponly=True, secure=True, samesite='Lax')
+    # Store access token in-memory only (do not set cookie). Set refresh token in HttpOnly cookie.
+    response.set_cookie('refresh_token', refresh_token, httponly=True, secure=False, samesite='Lax')
     
     return response
+
+@app.route("/api/refresh", methods=["POST"])
+@limiter.limit("30 per minute")
+def refresh_token():
+    r_token = request.cookies.get('refresh_token')
+    if not r_token:
+        # Check JSON body fallback safely
+        data = request.get_json(silent=True) or {}
+        r_token = data.get("refresh_token")
+        
+    if not r_token:
+        return jsonify({"error": "Refresh token is missing"}), 401
+    try:
+        payload = jwt.decode(r_token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        if payload.get("type") != "refresh":
+            return jsonify({"error": "Invalid token type"}), 401
+            
+        # Get user details from SQLite db
+        conn = sqlite3.connect(DATABASE_FILE)
+        c = conn.cursor()
+        c.execute("SELECT name, role FROM users WHERE phone = ?", (payload["phone"],))
+        user_row = c.fetchone()
+        conn.close()
+        
+        if not user_row:
+             return jsonify({"error": "User not found"}), 401
+             
+        # Issue new access token (15 mins)
+        access_token = jwt.encode({
+            "phone": payload["phone"],
+            "role": user_row[1],
+            "exp": datetime.utcnow() + timedelta(minutes=15)
+        }, app.config["SECRET_KEY"], algorithm="HS256")
+        
+        return jsonify({
+            "access_token": access_token,
+            "user": {"name": user_row[0], "role": user_row[1]}
+        })
+    except Exception as e:
+        logger.warning(f"Security Alert: Failed silent token refresh due to invalid/expired refresh token: {str(e)}")
+        return jsonify({"error": "Invalid or expired refresh token"}), 401
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
     response = make_response(jsonify({"status": "success", "message": "Logged out"}))
-    response.delete_cookie('access_token')
     response.delete_cookie('refresh_token')
     session.clear()
     return response
@@ -354,6 +448,7 @@ def logout():
 # ─── Core API Endpoints ────────────────────────────────
 @app.route("/")
 @jwt_required
+@limiter.limit("120 per minute")
 def dashboard():
     user_state = request.args.get("state", "Rajasthan")
     lang = request.args.get("lang", "en")
@@ -381,7 +476,6 @@ def recommend():
     water_filter = request.args.get("water", "Any")
     type_filter = request.args.get("type", "Any")
     soil_override = request.args.get("soil", "Auto")
-    phenomenon = request.args.get("phenomenon", "None")
         
     results = {}
     for crop, profile in crop_profiles.items():
@@ -447,7 +541,7 @@ iot_state = {
 }
 
 @app.route("/api/sensors", methods=["GET", "POST"])
-@limiter.limit("60 per minute")
+@limiter.limit("60 per minute")  # Limit sensors to 60/min
 def api_sensors():
     global latest
     if request.method == "POST":
@@ -459,10 +553,12 @@ def api_sensors():
         hmac_secret = os.getenv("ESP8266_HMAC_SECRET", "mitti_esp8266_signing_secret_key_99").encode()
         
         if not signature or not nonce or not timestamp:
+            logger.warning(f"Security Alert: Invalid HMAC parameters from IP: {request.remote_addr}")
             return jsonify({"error": "Missing HMAC security parameters"}), 401
             
         # Prevent replay attacks
         if not is_valid_nonce(nonce, timestamp):
+            logger.warning(f"Security Alert: Replay attack blocked (nonce: {nonce}, timestamp: {timestamp}) from IP: {request.remote_addr}")
             return jsonify({"error": "Replay attack detected or request timestamp expired"}), 400
             
         data = request.json or {}
@@ -471,11 +567,13 @@ def api_sensors():
         message = f"{nonce}:{timestamp}:{request.data.decode()}".encode()
         expected_sig = hmac.new(hmac_secret, message, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected_sig, signature):
+            logger.warning(f"Security Alert: HMAC signature mismatch from IP: {request.remote_addr}")
             return jsonify({"error": "HMAC signature mismatch"}), 401
             
-        # Validate range values
+        # Validate range and anomaly checking rules
         is_valid, err_msg = validate_sensor_payload(data)
         if not is_valid:
+            logger.warning(f"Security Alert: Sensor anomaly check blocked payload from IP: {request.remote_addr} ({err_msg})")
             return jsonify({"error": f"Sensor verification failed: {err_msg}"}), 400
             
         # Update state
@@ -511,7 +609,7 @@ def api_sensors():
     })
 
 @app.route("/api/irrigation/auto", methods=["POST"])
-@admin_required # Require admin user role & authentication for pump toggle
+@admin_required
 def toggle_auto_irrigate():
     data = request.json or {}
     confirm = data.get("confirm", False)
@@ -531,7 +629,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/api/scan-image", methods=["POST"])
-@limiter.limit("20 per minute")
+@limiter.limit("20 per minute")  # Limit scanner uploads to 20/min
 @jwt_required
 def scan_image():
     if 'image' not in request.files:
@@ -543,6 +641,7 @@ def scan_image():
         
     # 1. Validate extension
     if not allowed_file(file.filename):
+        logger.warning(f"Security Alert: Invalid upload extension blocked from IP: {request.remote_addr}")
         return jsonify({"error": "Unsupported image format. Allowed formats: PNG, JPG, JPEG"}), 400
         
     # 2. Check upload sizes (limit to 10 MB)
@@ -550,6 +649,7 @@ def scan_image():
     size = file.tell()
     file.seek(0)
     if size > 10 * 1024 * 1024:
+        logger.warning(f"Security Alert: Upload size limit (10MB) exceeded from IP: {request.remote_addr}")
         return jsonify({"error": "Image size exceeds 10 MB threshold"}), 400
         
     # 3. Read bytes & check magic signatures
@@ -561,6 +661,7 @@ def scan_image():
     is_jpeg = (image_bytes[:3] == b'\xff\xd8\xff')
     is_png = (image_bytes[:4] == b'\x89PNG')
     if not is_jpeg and not is_png:
+        logger.warning(f"Security Alert: Upload blocked due to mismatched magic bytes from IP: {request.remote_addr}")
         return jsonify({"error": "Malicious upload blocked: Image headers mismatched extension."}), 400
         
     crop_name = request.form.get('crop', '')
@@ -576,8 +677,8 @@ def scan_image():
                 solution = c.get("solution")
                 break
                 
-    # Add AI Safety Warning
-    safety_disclaimer = "Warning: This is an AI-assisted recommendation. Please verify agricultural guidelines locally before applying treatments."
+    # Add AI Safety Warning Wording Update
+    safety_disclaimer = "This diagnosis is AI-assisted and should be confirmed using local agricultural guidance before applying pesticides, fertilizers, or other crop treatments."
                 
     return jsonify({
         "disease": prediction["disease"],
